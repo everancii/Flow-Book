@@ -1,0 +1,352 @@
+import 'dart:async';
+import 'package:audiobookflow/resources/designs/app_colors.dart';
+import 'package:audiobookflow/resources/models/local_audiobook.dart';
+import 'package:audiobookflow/resources/services/local/local_audiobook_service.dart';
+import 'package:audiobookflow/utils/app_events.dart';
+import 'package:audiobookflow/utils/app_logger.dart';
+import 'package:audiobookflow/widgets/local_audiobook_item.dart';
+import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
+import 'package:saf/saf.dart';
+
+class LocalImportsSection extends StatefulWidget {
+  const LocalImportsSection({super.key});
+
+  @override
+  State<LocalImportsSection> createState() => _LocalImportsSectionState();
+}
+
+class _LocalImportsSectionState extends State<LocalImportsSection> {
+  String? rootFolderPath;
+  List<LocalAudiobook> audiobooks = [];
+  bool isLoading = false;
+  StreamSubscription<void>? _directoryChangeSubscription;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadRootFolder();
+
+    // Listen for directory changes from settings
+    _directoryChangeSubscription =
+        AppEvents.localDirectoryChanged.stream.listen((_) {
+      _loadRootFolderWithRefresh();
+    });
+  }
+
+  Future<void> _loadRootFolder() async {
+    setState(() {
+      isLoading = true;
+    });
+
+    rootFolderPath = await LocalAudiobookService.getRootFolderPath();
+
+    if (rootFolderPath != null) {
+      await _loadAudiobooks();
+    }
+
+    setState(() => isLoading = false);
+  }
+
+  Future<void> _loadRootFolderWithRefresh() async {
+    setState(() {
+      isLoading = true;
+    });
+
+    rootFolderPath = await LocalAudiobookService.getRootFolderPath();
+
+    if (rootFolderPath != null) {
+      // Do a smart refresh to scan the new directory
+      await _refreshAudiobooks();
+    }
+
+    setState(() => isLoading = false);
+  }
+
+  Future<void> _loadAudiobooks() async {
+    try {
+      // Load instantly from Hive cache
+      final loadedAudiobooks = await LocalAudiobookService.getAllAudiobooks();
+      for (LocalAudiobook audiobook in loadedAudiobooks) {
+        AppLogger.info(
+            'Audiobook: ${audiobook.title} by ${audiobook.author} ${audiobook.coverImagePath}');
+      }
+      setState(() {
+        audiobooks = loadedAudiobooks;
+      });
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error loading audiobooks: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+    setState(() => isLoading = false);
+  }
+
+  Future<void> _selectRootFolder() async {
+    try {
+      Saf.releasePersistedPermissions();
+      bool? isGranted = await Saf.getDynamicDirectoryPermission();
+      if (isGranted == true) {
+        List<String>? persistedDirectories =
+            await Saf.getPersistedPermissionDirectories();
+        if (persistedDirectories != null && persistedDirectories.isNotEmpty) {
+          String selectedDirectory = persistedDirectories.last;
+
+          await LocalAudiobookService.setRootFolderPath(selectedDirectory);
+          setState(() {
+            rootFolderPath = selectedDirectory;
+          });
+
+          // Clear all caches for the new folder and load audiobooks
+          await LocalAudiobookService.clearAllCaches();
+          setState(() => isLoading = true);
+          await _refreshAudiobooks();
+
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('Root folder set successfully!'),
+                backgroundColor: AppColors.primaryColor,
+              ),
+            );
+          }
+        } else {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('No directory was selected'),
+                backgroundColor: Colors.orange,
+              ),
+            );
+          }
+        }
+      } else {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Directory access permission denied'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error selecting folder: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
+  Future<void> _refreshAudiobooks() async {
+    setState(() => isLoading = true);
+    try {
+      // Use smart refresh that only processes changed files
+      AppLogger.info('Starting smart refresh...');
+      final loadedAudiobooks =
+          await LocalAudiobookService.smartRefreshAudiobooks();
+      AppLogger.info(
+          'Smart refresh completed, got ${loadedAudiobooks.length} audiobooks');
+      for (LocalAudiobook audiobook in loadedAudiobooks) {
+        AppLogger.info(
+            'Audiobook: ${audiobook.title} by ${audiobook.author} ${audiobook.coverImagePath}');
+      }
+      setState(() {
+        audiobooks = loadedAudiobooks;
+      });
+    } catch (e) {
+      AppLogger.error('Error in refresh: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error refreshing audiobooks: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+    setState(() => isLoading = false);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // Match FavouriteSection's header padding
+        Padding(
+          padding: const EdgeInsets.fromLTRB(8, 0, 8, 8),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                'Local Audiobooks',
+                style: GoogleFonts.ubuntu(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              if (rootFolderPath != null)
+                IconButton(
+                  onPressed: _refreshAudiobooks,
+                  icon:
+                      const Icon(Icons.refresh, color: AppColors.primaryColor),
+                  tooltip: 'Refresh audiobooks',
+                ),
+            ],
+          ),
+        ),
+
+        if (isLoading)
+          const Center(
+              child: CircularProgressIndicator(color: AppColors.primaryColor))
+        else if (rootFolderPath == null)
+          _buildSelectFolderCard()
+        else if (audiobooks.isEmpty)
+          _buildEmptyState()
+        else
+          _buildAudiobooksList(),
+      ],
+    );
+  }
+
+  Widget _buildSelectFolderCard() {
+    return Card(
+      elevation: 2,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: InkWell(
+        onTap: _selectRootFolder,
+        borderRadius: BorderRadius.circular(12),
+        child: Padding(
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            children: [
+              Icon(
+                Icons.folder_open,
+                size: 48,
+                color: AppColors.primaryColor,
+              ),
+              const SizedBox(height: 12),
+              Text(
+                'Select Root Folder',
+                style: GoogleFonts.ubuntu(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'Choose the folder where you keep your local audiobooks.\nRecommended structure: Audiobooks/Author/Title/',
+                textAlign: TextAlign.center,
+                style: GoogleFonts.ubuntu(
+                  fontSize: 14,
+                  color: Colors.grey[600],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildEmptyState() {
+    return Card(
+      elevation: 2,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          children: [
+            Icon(
+              Icons.library_books_outlined,
+              size: 48,
+              color: Colors.grey[400],
+            ),
+            const SizedBox(height: 12),
+            Text(
+              'No Audiobooks Found',
+              style: GoogleFonts.ubuntu(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Add audiobooks to your selected folder and tap refresh.',
+              textAlign: TextAlign.center,
+              style: GoogleFonts.ubuntu(
+                fontSize: 14,
+                color: Colors.grey[600],
+              ),
+            ),
+            const SizedBox(height: 12),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+              children: [
+                TextButton.icon(
+                  onPressed: _selectRootFolder,
+                  icon: const Icon(
+                    Icons.folder_open,
+                    color: AppColors.primaryColor,
+                  ),
+                  label: const Text(
+                    'Change Folder',
+                    style: TextStyle(
+                      color: AppColors.primaryColor,
+                    ),
+                  ),
+                ),
+                ElevatedButton.icon(
+                  onPressed: _refreshAudiobooks,
+                  icon: const Icon(Icons.refresh),
+                  label: const Text('Refresh'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.primaryColor,
+                    foregroundColor: Colors.white,
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildAudiobooksList() {
+    return SizedBox(
+      height: 250,
+      child: ListView.builder(
+        scrollDirection: Axis.horizontal,
+        padding: const EdgeInsets.symmetric(horizontal: 8),
+        itemCount: audiobooks.length,
+        itemBuilder: (context, index) {
+          return LocalAudiobookItem(
+            audiobook: audiobooks[index],
+            onUpdated: _loadAudiobooks,
+          );
+        },
+      ),
+    );
+  }
+
+  @override
+  void dispose() {
+    _directoryChangeSubscription?.cancel();
+    super.dispose();
+  }
+}
