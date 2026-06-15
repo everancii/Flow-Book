@@ -10,7 +10,7 @@ import '../utils/app_logger.dart';
 
 class LatestVersionFetch {
   final String url =
-      "https://raw.githubusercontent.com/everancii/Audiobooks-Flow/refs/heads/main/latest_version.txt";
+      "https://raw.githubusercontent.com/everancii/Flow-Book/refs/heads/main/latest_version.txt";
   static const platform = MethodChannel('app_update_channel');
 
   Future<Either<String, LatestVersionFetchModel>> getLatestVersion() async {
@@ -38,7 +38,7 @@ class LatestVersionFetch {
 
   Future<bool> downloadUpdate(String version) async {
     final String apkUrl =
-        "https://raw.githubusercontent.com/everancii/Audiobooks-Flow/refs/heads/main/$version/app-release.apk";
+        "https://raw.githubusercontent.com/everancii/Flow-Book/refs/heads/main/$version/app-release.apk";
 
     try {
       final response = await http.get(Uri.parse(apkUrl));
