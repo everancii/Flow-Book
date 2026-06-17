@@ -1,6 +1,6 @@
-Initial release:
-- Browse and play Librivox audiobooks
-- YouTube audio streaming
-- Smart caching for offline listening
-- Background playback
-- Personalized recommendations
+<ul>
+<li>Updated app icon</li>
+<li>Added 4read and KnigaVaUhe support</li>
+<li>Fixed 4read login button visibility</li>
+<li>Properly signed release APKs</li>
+</ul>
