@@ -58,7 +58,7 @@ class _FourReadLoginScreenState extends State<FourReadLoginScreen> {
           style: GoogleFonts.ubuntu(fontWeight: FontWeight.bold),
         ),
       ),
-      body: Padding(
+      body: SingleChildScrollView(
         padding: const EdgeInsets.all(24),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -96,6 +96,7 @@ class _FourReadLoginScreenState extends State<FourReadLoginScreen> {
                 label: const Text('Login via Browser'),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.deepOrange,
+                  foregroundColor: Colors.white,
                   padding: const EdgeInsets.symmetric(vertical: 16),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12),
