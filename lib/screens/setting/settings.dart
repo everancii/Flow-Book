@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:audiobookflow/utils/app_events.dart';
 import 'package:audiobookflow/resources/services/local/local_audiobook_service.dart';
@@ -26,7 +27,7 @@ class _SettingsState extends State<Settings> {
     'nl': 'Nederlands (Dutch)',
     'mul': 'Multiple / Multilingual',
     'pt': 'Português (Portuguese)',
-    'it': 'Italiano (Italian)',
+    'it': 'Italian (Italian)',
     'ru': 'Русский (Russian)',
     'uk': 'Українська (Ukrainian)',
     'el': 'Ελληνικά (Greek)',
@@ -46,6 +47,7 @@ class _SettingsState extends State<Settings> {
   late final Box _box;
   List<String> _selected = [];
   String? _rootFolderPath;
+  String _appVersion = '';
 
   @override
   void initState() {
@@ -55,6 +57,15 @@ class _SettingsState extends State<Settings> {
       _box.get('selectedLanguages', defaultValue: <String>[]),
     );
     _loadRootFolderPath();
+    _loadAppVersion();
+  }
+
+  Future<void> _loadAppVersion() async {
+    final info = await PlatformAssetBundle().load('assets/version.json');
+    final versionString = String.fromCharCodes(info.buffer.asUint8List());
+    setState(() {
+      _appVersion = versionString;
+    });
   }
 
   Future<void> _loadRootFolderPath() async {
@@ -344,10 +355,10 @@ class _SettingsState extends State<Settings> {
           const Divider(),
 
           // Version
-          const ListTile(
-            leading: Icon(Icons.info_outline),
-            title: Text('Version'),
-            subtitle: Text('3.0.0'),
+          ListTile(
+            leading: const Icon(Icons.info_outline),
+            title: const Text('Version'),
+            subtitle: Text(_appVersion.isNotEmpty ? _appVersion : '1.1.1'),
           ),
         ],
       ),

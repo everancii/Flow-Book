@@ -28,7 +28,9 @@
         android:label="Flow Book"
         android:name="${applicationName}"
         android:enableOnBackInvokedCallback="true"
-        android:usesCleartextTraffic="true"
+        android:allowBackup="true"
+        android:fullBackupContent="@xml/backup_rules"
+        android:dataExtractionRules="@xml/backup_rules"
         android:icon="@mipmap/ic_launcher">
         <activity
             android:name="com.ryanheise.audioservice.AudioServiceActivity"
