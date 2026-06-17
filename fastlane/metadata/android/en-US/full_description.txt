@@ -1,16 +1,7 @@
-<p>Flow Book is a modern, beautifully designed audiobook player built with Flutter. It brings together audiobooks from <a href="https://librivox.org">Librivox</a>, audio streaming from YouTube, <a href="https://4read.org">4read</a>, and <a href="https://knigavuhe.org">KnigaVaUhe</a> into a single, seamless experience.</p>
+Flow Book is a modern audiobook player built with Flutter. Browse and play thousands of free Librivox audiobooks, stream audio from YouTube, 4read, knigavuhe, and manage your personal library — all in one clean, ad-free app.
+Features:
 
-<p><b>Features:</b></p>
-<ul>
-<li>Browse and search thousands of free Librivox audiobooks</li>
-<li>Stream audio directly from YouTube, 4read, and KnigaVaUhe</li>
-<li>Smart caching for offline listening</li>
-<li>Personalized recommendations based on your listening history</li>
-<li>Background playback with notification controls</li>
-<li>Clean, modern Material Design interface</li>
-<li>Manage your personal audiobook library</li>
-</ul>
-
-<p><b>Built with privacy in mind:</b> No account required, no tracking, no ads. Your listening habits stay on your device.</p>
-
-<p>Flow Book is free and open source software, licensed under the MIT License.</p>
+    Browse and search Librivox,Youtube,4read,knigavuhe audiobooks
+    Smart caching for offline listening
+    Background playback with notification controls
+    No account required, no tracking, no ads

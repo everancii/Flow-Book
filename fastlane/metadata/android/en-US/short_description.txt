@@ -1,1 +1,1 @@
-Modern Flutter audiobook player for Librivox, YouTube, 4read, and KnigaVaUhe streaming
+Modern Flutter audiobook player for Librivox,YouTube,4read,knigavuhe streaming.
