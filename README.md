@@ -27,7 +27,7 @@ This app enables `android:usesCleartextTraffic` because it streams content from 
    ```bash
    cd Flow-Book
    flutter pub get
-   flutter build apk --release
+   flutter build apk --release --split-per-abi
    ```
 
 ## AI Disclosure
