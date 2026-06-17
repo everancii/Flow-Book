@@ -62,3 +62,5 @@ pubsec.lock
 .mimocode/
 .metadata
 openspec/
+android/key.properties
+android/app/release-key.jks
