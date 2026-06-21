@@ -100,7 +100,8 @@ class DownloadManager {
         }
 
         final String fileTitle =
-            fileData['title'] as String? ?? 'track_${i + 1}';
+            (fileData['title'] as String? ?? 'track_${i + 1}')
+                .replaceAll(RegExp(r'\.(mp3|m4a|mp4|ogg|flac|wav)$'), '');
         final String fileName = '$fileTitle.mp3';
         final String url = fileData['url'] as String? ?? '';
         if (url.isEmpty) {
