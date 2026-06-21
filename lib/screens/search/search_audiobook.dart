@@ -9,6 +9,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:hive_flutter/hive_flutter.dart';
 
 class SearchAudiobook extends StatefulWidget {
   const SearchAudiobook({super.key});
@@ -661,58 +662,73 @@ class _SourceChoiceChips extends StatelessWidget {
     required this.onChanged,
   });
 
+  static const Map<SearchSourceSelection, String> _sourceKeys = {
+    SearchSourceSelection.librivox: 'librivox',
+    SearchSourceSelection.youtube: 'youtube',
+    SearchSourceSelection.archiveOrg: 'archiveOrg',
+    SearchSourceSelection.fourRead: 'fourRead',
+    SearchSourceSelection.knigavuhe: 'knigavuhe',
+  };
+
   @override
   Widget build(BuildContext context) {
+    final box = Hive.box('settings');
+    final enabledSources = List<String>.from(
+      box.get('enabledSearchSources',
+          defaultValue: ['librivox', 'youtube', 'archiveOrg', 'fourRead', 'knigavuhe']),
+    );
+
+    final chips = <Widget>[
+      _chip(
+        label: 'All',
+        icon: Icons.layers_rounded,
+        value: SearchSourceSelection.all,
+        accentColor: AppColors.primaryColor,
+      ),
+    ];
+
+    for (final entry in _sourceKeys.entries) {
+      if (enabledSources.contains(entry.value)) {
+        chips.add(const SizedBox(width: 8));
+        chips.add(_chip(
+          label: _sourceLabels[entry.value] ?? entry.value,
+          icon: _sourceIcons[entry.value] ?? Icons.source,
+          value: entry.key,
+          accentColor: _sourceColors[entry.value] ?? AppColors.primaryColor,
+        ));
+      }
+    }
+
     return SingleChildScrollView(
       scrollDirection: Axis.horizontal,
       padding: const EdgeInsets.only(left: 4),
-      child: Row(
-        children: [
-          _chip(
-            label: 'All',
-            icon: Icons.layers_rounded,
-            value: SearchSourceSelection.all,
-            accentColor: AppColors.primaryColor,
-          ),
-          const SizedBox(width: 8),
-          _chip(
-            label: 'LibriVox',
-            icon: Icons.menu_book_rounded,
-            value: SearchSourceSelection.librivox,
-            accentColor: AppColors.primaryColor,
-          ),
-          const SizedBox(width: 8),
-          _chip(
-            label: 'YouTube',
-            icon: Icons.smart_display_rounded,
-            value: SearchSourceSelection.youtube,
-            accentColor: Colors.red,
-          ),
-          const SizedBox(width: 8),
-          _chip(
-            label: 'Archive.org',
-            icon: Icons.cloud_download_rounded,
-            value: SearchSourceSelection.archiveOrg,
-            accentColor: const Color(0xFF00897B),
-          ),
-          const SizedBox(width: 8),
-          _chip(
-            label: '4Read',
-            icon: Icons.library_books_rounded,
-            value: SearchSourceSelection.fourRead,
-            accentColor: const Color(0xFFFF8A00),
-          ),
-          const SizedBox(width: 8),
-          _chip(
-            label: 'knigavuhe',
-            icon: Icons.headphones_rounded,
-            value: SearchSourceSelection.knigavuhe,
-            accentColor: const Color(0xFF9C27B0),
-          ),
-        ],
-      ),
+      child: Row(children: chips),
     );
   }
+
+  static const Map<String, String> _sourceLabels = {
+    'librivox': 'LibriVox',
+    'youtube': 'YouTube',
+    'archiveOrg': 'Archive.org',
+    'fourRead': '4Read',
+    'knigavuhe': 'Knigavuhe',
+  };
+
+  static const Map<String, IconData> _sourceIcons = {
+    'librivox': Icons.menu_book_rounded,
+    'youtube': Icons.smart_display_rounded,
+    'archiveOrg': Icons.cloud_download_rounded,
+    'fourRead': Icons.library_books_rounded,
+    'knigavuhe': Icons.headphones_rounded,
+  };
+
+  static const Map<String, Color> _sourceColors = {
+    'librivox': AppColors.primaryColor,
+    'youtube': Colors.red,
+    'archiveOrg': Color(0xFF00897B),
+    'fourRead': Color(0xFFFF8A00),
+    'knigavuhe': Color(0xFF9C27B0),
+  };
 
   Widget _chip({
     required String label,

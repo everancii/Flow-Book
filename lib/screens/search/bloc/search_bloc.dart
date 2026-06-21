@@ -7,6 +7,7 @@ import 'package:audiobookflow/resources/services/knigavuhe/knigavuhe_search_serv
 import 'package:audiobookflow/resources/services/youtube/youtube_search_service.dart';
 import 'package:audiobookflow/utils/app_events.dart';
 import 'package:bloc/bloc.dart';
+import 'package:hive_flutter/hive_flutter.dart';
 import 'package:meta/meta.dart';
 
 part 'search_event.dart';
@@ -93,20 +94,25 @@ class SearchBloc extends Bloc<SearchEvent, SearchState> {
 
     final futures = <Future<_SearchBatchResult>>[];
     final includeLibrivox =
-        sourceSelection == SearchSourceSelection.all ||
-            sourceSelection == SearchSourceSelection.librivox;
+        sourceSelection == SearchSourceSelection.librivox ||
+            (sourceSelection == SearchSourceSelection.all &&
+                _isSourceEnabled('librivox'));
     final includeYoutube =
-        sourceSelection == SearchSourceSelection.all ||
-            sourceSelection == SearchSourceSelection.youtube;
+        sourceSelection == SearchSourceSelection.youtube ||
+            (sourceSelection == SearchSourceSelection.all &&
+                _isSourceEnabled('youtube'));
     final includeArchiveOrg =
-        sourceSelection == SearchSourceSelection.all ||
-            sourceSelection == SearchSourceSelection.archiveOrg;
+        sourceSelection == SearchSourceSelection.archiveOrg ||
+            (sourceSelection == SearchSourceSelection.all &&
+                _isSourceEnabled('archiveOrg'));
     final includeFourRead =
-        sourceSelection == SearchSourceSelection.all ||
-            sourceSelection == SearchSourceSelection.fourRead;
+        sourceSelection == SearchSourceSelection.fourRead ||
+            (sourceSelection == SearchSourceSelection.all &&
+                _isSourceEnabled('fourRead'));
     final includeKnigavuhe =
-        sourceSelection == SearchSourceSelection.all ||
-            sourceSelection == SearchSourceSelection.knigavuhe;
+        sourceSelection == SearchSourceSelection.knigavuhe ||
+            (sourceSelection == SearchSourceSelection.all &&
+                _isSourceEnabled('knigavuhe'));
 
     if (includeLibrivox) {
       futures.add(_searchLibrivox(query, page));
@@ -345,6 +351,15 @@ class SearchBloc extends Bloc<SearchEvent, SearchState> {
     } catch (e) {
       return _SearchBatchResult(books: const [], error: e.toString());
     }
+  }
+
+  bool _isSourceEnabled(String source) {
+    final box = Hive.box('settings');
+    final enabled = List<String>.from(
+      box.get('enabledSearchSources',
+          defaultValue: ['librivox', 'youtube', 'archiveOrg', 'fourRead', 'knigavuhe']),
+    );
+    return enabled.contains(source);
   }
 
   @override

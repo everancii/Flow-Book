@@ -45,16 +45,31 @@ class _SettingsState extends State<Settings> {
   };
 
   late final Box _box;
+  late final Box _settingsBox;
   List<String> _selected = [];
+  List<String> _enabledSources = [];
   String? _rootFolderPath;
   String _appVersion = '';
+
+  static const Map<String, String> _sourceLabels = {
+    'librivox': 'LibriVox',
+    'youtube': 'YouTube',
+    'archiveOrg': 'Archive.org',
+    'fourRead': '4Read',
+    'knigavuhe': 'Knigavuhe',
+  };
 
   @override
   void initState() {
     super.initState();
     _box = Hive.box('language_prefs_box');
+    _settingsBox = Hive.box('settings');
     _selected = List<String>.from(
       _box.get('selectedLanguages', defaultValue: <String>[]),
+    );
+    _enabledSources = List<String>.from(
+      _settingsBox.get('enabledSearchSources',
+          defaultValue: _sourceLabels.keys.toList()),
     );
     _loadRootFolderPath();
     _loadAppVersion();
@@ -216,6 +231,68 @@ class _SettingsState extends State<Settings> {
     }
   }
 
+  Future<void> _editSearchSources() async {
+    final temp = {..._enabledSources};
+    await showDialog(
+      context: context,
+      builder: (ctx) {
+        return AlertDialog(
+          title: const Text('Search Sources'),
+          content: SizedBox(
+            width: double.maxFinite,
+            child: ListView(
+              shrinkWrap: true,
+              children: _sourceLabels.entries.map((e) {
+                final key = e.key;
+                final label = e.value;
+                final checked = temp.contains(key);
+                return CheckboxListTile(
+                  value: checked,
+                  onChanged: (v) {
+                    setState(() {});
+                    if (v == true) {
+                      temp.add(key);
+                    } else {
+                      temp.remove(key);
+                    }
+                    (ctx as Element).markNeedsBuild();
+                  },
+                  title: Text(label),
+                  controlAffinity: ListTileControlAffinity.leading,
+                  dense: true,
+                );
+              }).toList(),
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(ctx).pop(),
+              child: const Text('Cancel'),
+            ),
+            FilledButton(
+              onPressed: () async {
+                await _settingsBox.put(
+                    'enabledSearchSources', temp.toList());
+                setState(() {
+                  _enabledSources = temp.toList();
+                });
+                if (ctx.mounted) Navigator.of(ctx).pop();
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Search sources updated.'),
+                    ),
+                  );
+                }
+              },
+              child: const Text('Save'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
   String _themeSubtitle(AppTheme theme) {
     switch (theme) {
       case AppTheme.light:
@@ -317,6 +394,27 @@ class _SettingsState extends State<Settings> {
             ),
             trailing: const Icon(Icons.edit),
             onTap: _editLanguages,
+          ),
+          const Divider(),
+
+          // Search sources
+          ListTile(
+            leading: const Icon(Icons.search),
+            title: const Text('Search Sources'),
+            subtitle: Wrap(
+              spacing: 6,
+              runSpacing: -8,
+              children: _enabledSources
+                  .map((s) => Chip(
+                        label: Text(_sourceLabels[s] ?? s),
+                        visualDensity: VisualDensity.compact,
+                        materialTapTargetSize:
+                            MaterialTapTargetSize.shrinkWrap,
+                      ))
+                  .toList(),
+            ),
+            trailing: const Icon(Icons.edit),
+            onTap: _editSearchSources,
           ),
           const Divider(),
 
