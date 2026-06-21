@@ -28,7 +28,9 @@ import 'package:audiobookflow/screens/audiobook_player/widgets/favourite_button.
 import 'package:audiobookflow/screens/download_audiobook/widget/download_button.dart';
 
 class AudiobookPlayer extends StatefulWidget {
-  const AudiobookPlayer({super.key});
+  final VoidCallback? onSwipeDown;
+
+  const AudiobookPlayer({super.key, this.onSwipeDown});
 
   @override
   State<AudiobookPlayer> createState() => _AudiobookPlayerState();
@@ -533,7 +535,15 @@ class _AudiobookPlayerState extends State<AudiobookPlayer> {
               ),
             ),
             child: SafeArea(
-              child: SingleChildScrollView(
+              child: NotificationListener<OverscrollNotification>(
+                onNotification: (notification) {
+                  if (notification.overscroll < -50 && widget.onSwipeDown != null) {
+                    widget.onSwipeDown!();
+                    return true;
+                  }
+                  return false;
+                },
+                child: SingleChildScrollView(
                 padding: EdgeInsets.fromLTRB(
                   20,
                   0,
@@ -751,6 +761,7 @@ class _AudiobookPlayerState extends State<AudiobookPlayer> {
                   ],
                 ),
               ),
+            ),
             ),
           ),
         );

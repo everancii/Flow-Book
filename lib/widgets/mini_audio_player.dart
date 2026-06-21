@@ -148,7 +148,9 @@ class _MiniAudioPlayerState extends State<MiniAudioPlayer> {
       footerHeight: footerHeight,
       footer: footer,
       body: widget.navigationShell,
-      panel: const AudiobookPlayer(),
+      panel: AudiobookPlayer(
+        onSwipeDown: () => weSlideController.hide(),
+      ),
       panelHeader: Offstage(
         offstage: keyboardOpen,
         child: Container(
