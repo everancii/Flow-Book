@@ -426,18 +426,7 @@ class DownloadManager {
 
   bool isDownloaded(String audiobookId) {
     final status = downloadStatusBox.get('status_$audiobookId');
-    if (status == null || status['isCompleted'] != true) return false;
-
-    final safeId = _safeDirectoryName(audiobookId);
-    // Check both possible base directories
-    for (final base in [
-      '/storage/emulated/0/Android/data/com.everancii.audiobookflow/files',
-      Directory.current.path,
-    ]) {
-      final marker = File('$base/downloads/$safeId/audiobook.txt');
-      if (marker.existsSync()) return true;
-    }
-    return false;
+    return status != null && status['isCompleted'] == true;
   }
 
   /// Clean up stale download statuses where files no longer exist on disk.
@@ -459,7 +448,20 @@ class DownloadManager {
         final dir = Directory('${baseDir.path}/downloads/$safeId');
         if (!await dir.exists()) {
           await downloadStatusBox.delete(key);
-          AppLogger.debug('Cleaned stale download status: $audiobookId');
+          AppLogger.debug('Cleaned stale download status (no dir): $audiobookId');
+          continue;
+        }
+        // Directory exists — check if it has actual audio files
+        bool hasAudio = false;
+        await for (final f in dir.list()) {
+          if (f.path.endsWith('.mp3') || f.path.endsWith('.m4a')) {
+            hasAudio = true;
+            break;
+          }
+        }
+        if (!hasAudio) {
+          await downloadStatusBox.delete(key);
+          AppLogger.debug('Cleaned stale download status (no audio files): $audiobookId');
         }
       }
     } catch (e) {
