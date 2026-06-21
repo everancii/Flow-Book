@@ -1,6 +1,5 @@
-import 'dart:io';
 import 'dart:convert';
-import 'package:flutter/services.dart';
+import 'dart:io';
 import 'package:fpdart/fpdart.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:http/http.dart' as http;
@@ -9,42 +8,43 @@ import 'models/latest_version_fetch_model.dart';
 import '../utils/app_logger.dart';
 
 class LatestVersionFetch {
-  final String url =
-      "https://raw.githubusercontent.com/everancii/Flow-Book/refs/heads/main/latest_version.txt";
-  static const platform = MethodChannel('app_update_channel');
+  static const _apiUrl =
+      'https://api.github.com/repos/everancii/Flow-Book/releases/latest';
 
   Future<Either<String, LatestVersionFetchModel>> getLatestVersion() async {
     try {
-      final response = await http.get(Uri.parse(url));
+      final response = await http.get(
+        Uri.parse(_apiUrl),
+        headers: {'Accept': 'application/vnd.github.v3+json'},
+      );
       if (response.statusCode == 200) {
-        final json = jsonDecode(response.body);
+        final json = jsonDecode(response.body) as Map<String, dynamic>;
         return Right(LatestVersionFetchModel.fromJson(json));
       } else {
-        return Left("Failed to fetch latest version");
+        return Left('Failed to fetch latest version (${response.statusCode})');
       }
     } catch (e) {
-      return Left("Failed to fetch latest version");
+      return Left('Failed to fetch latest version');
     }
   }
 
   Future<String?> getApkPath(String version) async {
     final directory = await getExternalStorageDirectory();
-    final file = File('${directory!.path}/$version.apk');
+    if (directory == null) return null;
+    final file = File('${directory.path}/$version.apk');
     if (await file.exists()) {
       return file.path;
     }
     return null;
   }
 
-  Future<bool> downloadUpdate(String version) async {
-    final String apkUrl =
-        "https://raw.githubusercontent.com/everancii/Flow-Book/refs/heads/main/$version/app-release.apk";
-
+  Future<bool> downloadUpdate(String downloadUrl, String version) async {
     try {
-      final response = await http.get(Uri.parse(apkUrl));
+      final response = await http.get(Uri.parse(downloadUrl));
       if (response.statusCode == 200) {
         final directory = await getExternalStorageDirectory();
-        final file = File('${directory!.path}/$version.apk');
+        if (directory == null) return false;
+        final file = File('${directory.path}/$version.apk');
         await file.writeAsBytes(response.bodyBytes);
         return true;
       }
@@ -59,15 +59,6 @@ class LatestVersionFetch {
     try {
       final apkPath = await getApkPath(version);
       if (apkPath != null) {
-        // Try to install using custom method channel first
-        try {
-          await platform.invokeMethod('installApk', {'apkPath': apkPath});
-          return;
-        } catch (e) {
-          AppLogger.warning('Method channel failed, trying OpenFile: $e', 'LatestVersionFetch');
-        }
-
-        // Fallback to OpenFile
         final result = await OpenFile.open(apkPath);
         if (result.type != ResultType.done) {
           AppLogger.error('OpenFile error: ${result.message}', 'LatestVersionFetch');

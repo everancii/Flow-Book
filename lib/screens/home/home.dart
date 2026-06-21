@@ -3,6 +3,7 @@ import 'package:audiobookflow/screens/home/widgets/favourite_section.dart';
 import 'package:audiobookflow/screens/setting/listening_stats_screen.dart';
 import 'package:audiobookflow/utils/app_logger.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
@@ -22,19 +23,28 @@ class Home extends StatefulWidget {
 }
 
 class _HomeState extends State<Home> {
-  // Update & version
   final LatestVersionFetch _latestVersionFetch = LatestVersionFetch();
-  final String currentVersion = "3.0.0";
+  String currentVersion = '';
 
   @override
   void initState() {
     super.initState();
-    _checkForUpdates();
+    _loadVersionAndCheck();
   }
 
   @override
   void dispose() {
     super.dispose();
+  }
+
+  Future<void> _loadVersionAndCheck() async {
+    try {
+      final info = await PlatformAssetBundle().load('assets/version.json');
+      currentVersion = String.fromCharCodes(info.buffer.asUint8List()).trim();
+    } catch (e) {
+      AppLogger.debug('Failed to load version from assets: $e');
+    }
+    _checkForUpdates();
   }
 
   Future<void> _checkForUpdates() async {
@@ -71,8 +81,15 @@ class _HomeState extends State<Home> {
     if (existingApk != null) {
       _showUpdatePrompt(versionModel);
     } else {
-      final success =
-          await _latestVersionFetch.downloadUpdate(versionModel.latestVersion!);
+      final downloadUrl = versionModel.apkDownloadUrl;
+      if (downloadUrl == null) {
+        AppLogger.debug('No APK download URL found in release');
+        return;
+      }
+      final success = await _latestVersionFetch.downloadUpdate(
+        downloadUrl,
+        versionModel.latestVersion!,
+      );
       if (success) {
         _showUpdatePrompt(versionModel);
       }
@@ -85,7 +102,7 @@ class _HomeState extends State<Home> {
       builder: (BuildContext context) => UpdatePromptDialog(
         currentVersion: currentVersion,
         newVersion: versionModel.latestVersion!,
-        changelogs: versionModel.changelogs ?? [],
+        changelogs: versionModel.changelogs,
         onUpdate: () =>
             _latestVersionFetch.installUpdate(versionModel.latestVersion!),
       ),
@@ -129,22 +146,18 @@ class _HomeState extends State<Home> {
       ),
       body: CustomScrollView(
         slivers: [
-          // --- Recently Played section ---
           SliverToBoxAdapter(
             child: ConstrainedBox(
               constraints: const BoxConstraints(maxHeight: 290),
               child: const HistorySection(),
             ),
           ),
-          // --- 4Read Top 100 spotlight ---
           SliverToBoxAdapter(
             child: _buildTop100Spotlight(context),
           ),
-          // --- Knigavuhe spotlight ---
           SliverToBoxAdapter(
             child: _buildKnigavuheSpotlight(context),
           ),
-          // --- Favourite section ---
           SliverToBoxAdapter(
             child: FavouriteSection(),
           ),
