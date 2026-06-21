@@ -175,6 +175,9 @@ class AudiobookFile {
     try {
       final appDir = await getApplicationDocumentsDirectory();
       final downloadDir = Directory('${appDir.path}/downloads/$audiobookId');
+      if (!await downloadDir.exists()) {
+        return const Right([]);
+      }
       List<FileSystemEntity> files = downloadDir
           .listSync()
           .where((file) => file.path.endsWith('.mp3'))
