@@ -7,7 +7,7 @@ import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
-import 'package:audiobookflow/utils/permission_helper.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../../resources/latest_version_fetch.dart';
 import '../../resources/models/latest_version_fetch_model.dart';
@@ -55,45 +55,10 @@ class _HomeState extends State<Home> {
       (latestVersionModel) async {
         if (latestVersionModel.latestVersion != null &&
             latestVersionModel.latestVersion!.compareTo(currentVersion) > 0) {
-          await _handleUpdateAvailable(latestVersionModel);
+          _showUpdatePrompt(latestVersionModel);
         }
       },
     );
-  }
-
-  Future<void> _handleUpdateAvailable(
-    LatestVersionFetchModel versionModel,
-  ) async {
-    final permissionGranted =
-        await PermissionHelper.handleUpdatePermission(context);
-
-    if (permissionGranted) {
-      _proceedWithUpdate(versionModel);
-    }
-  }
-
-  Future<void> _proceedWithUpdate(
-    LatestVersionFetchModel versionModel,
-  ) async {
-    final existingApk =
-        await _latestVersionFetch.getApkPath(versionModel.latestVersion!);
-
-    if (existingApk != null) {
-      _showUpdatePrompt(versionModel);
-    } else {
-      final downloadUrl = versionModel.apkDownloadUrl;
-      if (downloadUrl == null) {
-        AppLogger.debug('No APK download URL found in release');
-        return;
-      }
-      final success = await _latestVersionFetch.downloadUpdate(
-        downloadUrl,
-        versionModel.latestVersion!,
-      );
-      if (success) {
-        _showUpdatePrompt(versionModel);
-      }
-    }
   }
 
   void _showUpdatePrompt(LatestVersionFetchModel versionModel) {
@@ -103,8 +68,13 @@ class _HomeState extends State<Home> {
         currentVersion: currentVersion,
         newVersion: versionModel.latestVersion!,
         changelogs: versionModel.changelogs,
-        onUpdate: () =>
-            _latestVersionFetch.installUpdate(versionModel.latestVersion!),
+        onUpdate: () {
+          Navigator.of(context).pop();
+          launchUrl(
+            Uri.parse('https://github.com/everancii/Flow-Book/releases/latest'),
+            mode: LaunchMode.externalApplication,
+          );
+        },
       ),
     );
   }

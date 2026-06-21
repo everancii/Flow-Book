@@ -86,6 +86,7 @@ Future<void> initHive() async {
   await Hive.openBox('bookmarks_box');
   await Hive.openBox('listening_stats_box');
   await Hive.openBox('four_read_auth');
+  await Hive.openBox('settings');
   Box recommendedAudiobooksBox = Hive.box('recommened_audiobooks_box');
 
   isRecommendScreen = recommendedAudiobooksBox.isEmpty ? 1 : 0;
