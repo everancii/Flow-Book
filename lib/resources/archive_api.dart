@@ -40,6 +40,7 @@ const Map<String, List<String>> _langAliases = {
   'pt': ['pt', 'por', 'portuguese'],
   'it': ['it', 'ita', 'italian'],
   'ru': ['ru', 'rus', 'russian'],
+  'uk': ['uk', 'ukr', 'ukrainian'],
   'el': ['el', 'ell', 'greek'],
   'grc': ['grc', 'ancient greek', 'ancient', 'greek'], // Ancient Greek
   'ja': ['ja', 'jpn', 'japanese'],

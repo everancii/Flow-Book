@@ -224,17 +224,26 @@ class _ControlsState extends State<Controls> {
             StreamBuilder<PlaybackState>(
               stream: widget.audioHandler.playbackState,
               builder: (context, snapshot) {
-                final isPlaying = snapshot.data?.playing ?? false;
-                final playbackState = snapshot.data;
-                final processingState = (playbackState?.processingState ??
-                    AudioProcessingState.idle);
-                if (processingState == AudioProcessingState.loading ||
-                    processingState == AudioProcessingState.buffering) {
-                  return const CircularProgressIndicator(
-                    color: AppColors.primaryColor,
-                    strokeWidth: 2,
+                final st = snapshot.data;
+                final isPlaying = st?.playing ?? false;
+                final isLoading = st?.processingState == AudioProcessingState.loading;
+
+                if (isLoading) {
+                  return SizedBox(
+                    width: 61,
+                    height: 61,
+                    child: Padding(
+                      padding: const EdgeInsets.all(12.0),
+                      child: CircularProgressIndicator(
+                        strokeWidth: 3.0,
+                        color: Theme.of(context).brightness == Brightness.dark
+                            ? Colors.white
+                            : Colors.black,
+                      ),
+                    ),
                   );
                 }
+
                 return IconButton(
                   icon: Icon(
                     isPlaying ? Icons.pause : Icons.play_arrow,

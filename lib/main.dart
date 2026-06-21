@@ -108,7 +108,7 @@ class _MyAppState extends State<MyApp> {
   GoRouter _buildRouter() {
     return GoRouter(
       navigatorKey: _rootNavigatorKey,
-      initialLocation: '/home',
+      initialLocation: isRecommendScreen == 1 ? '/recommendation_screen' : '/home',
       routes: [
         GoRoute(
           path: '/recommendation_screen',

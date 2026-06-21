@@ -329,12 +329,15 @@ class MyAudioHandler extends BaseAudioHandler {
         initialPosition: currentIsYT
             ? Duration.zero
             : Duration(milliseconds: positionInMilliseconds),
+        preload: playImmediately,
       );
 
       if (myGen != _initGen) return;
 
       if (currentIsYT && positionInMilliseconds > 0) {
-        await _waitForProcessingReady(timeout: const Duration(seconds: 5));
+        if (playImmediately) {
+          await _waitForProcessingReady(timeout: const Duration(seconds: 5));
+        }
         await _player.seek(Duration(milliseconds: positionInMilliseconds),
             index: safeIndex);
       } else {

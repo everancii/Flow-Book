@@ -15,22 +15,28 @@ class KnigavuheDetailService {
   Future<Either<String, KnigavuheDetailResult>> getAudiobookFiles(
       String bookUrl) async {
     try {
-      final response = await http.get(
-        Uri.parse(bookUrl),
-        headers: const {
-          'User-Agent':
-              'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
-          'Accept':
-              'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-          'Referer': 'https://knigavuhe.org/',
-        },
-      );
+      final client = http.Client();
+      try {
+        final response = await client.get(
+          Uri.parse(bookUrl),
+          headers: const {
+            'User-Agent':
+                'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
+            'Accept':
+                'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+            'Accept-Language': 'ru-RU,ru;q=0.9,en;q=0.8',
+            'Referer': 'https://knigavuhe.org/',
+          },
+        );
 
-      if (response.statusCode != 200) {
-        return Left('Failed to load knigavuhe page: ${response.statusCode}');
+        if (response.statusCode != 200) {
+          return Left('Failed to load knigavuhe page: ${response.statusCode}');
+        }
+
+        return _parsePage(response.body);
+      } finally {
+        client.close();
       }
-
-      return _parsePage(response.body);
     } catch (e) {
       return Left('Failed to load knigavuhe audiobook: $e');
     }
@@ -82,14 +88,26 @@ class KnigavuheDetailService {
     try {
       final tracksJson = jsonDecode(match.group(1)!) as List;
       final files = <AudiobookFile>[];
+      int skippedAffiliate = 0;
 
       for (var i = 0; i < tracksJson.length; i++) {
         final track = tracksJson[i];
         final url = track['url'] as String?;
         final title = track['title'] as String?;
-        final duration = (track['duration'] as num?)?.toDouble();
+        final duration = (track['duration'] as num?)?.toDouble() ?? 0.0;
 
         if (url == null || url.isEmpty) continue;
+
+        // Skip affiliate/trial URLs — these are Litres purchase links, not
+        // direct audio streams. They have duration == 0 and cannot be played.
+        final isAffiliate = url.contains('litres.ru') ||
+            url.contains('audiotrial') ||
+            url.contains('affiliate') ||
+            (duration == 0.0 && !url.contains('knigavuhe.org'));
+        if (isAffiliate) {
+          skippedAffiliate++;
+          continue;
+        }
 
         files.add(AudiobookFile.fromMap({
           'identifier': 'knigavuhe',
@@ -106,6 +124,11 @@ class KnigavuheDetailService {
       }
 
       if (files.isEmpty) {
+        if (skippedAffiliate > 0) {
+          return Left(
+            'This audiobook is only available for purchase on Litres and cannot be streamed for free.',
+          );
+        }
         return Left('No audio tracks found');
       }
 

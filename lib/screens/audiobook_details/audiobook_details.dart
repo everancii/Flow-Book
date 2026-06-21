@@ -444,12 +444,12 @@ class _AudiobookDetailsState extends State<AudiobookDetails> {
                             DescriptionText(
                               description: descriptionText,
                               maxLength: widget.isYoutubeSearch
-                                  ? 300
+                                  ? 600
                                   : widget.isFourRead
-                                      ? 600
+                                      ? 800
                                       : widget.isKnigavuhe
-                                          ? 600
-                                          : 100,
+                                          ? 800
+                                          : 400,
                               expandable: true,
                             ),
                             const SizedBox(height: 10),

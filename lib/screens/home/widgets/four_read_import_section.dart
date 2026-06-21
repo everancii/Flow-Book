@@ -17,9 +17,7 @@ class _FourReadImportsSectionState extends State<FourReadImportsSection> {
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      FourReadAudiobookNotifier().fetchAudiobooks();
-    });
+    // Removed automatic fetch on startup
   }
 
   @override

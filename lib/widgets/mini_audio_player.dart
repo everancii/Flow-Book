@@ -13,6 +13,7 @@ import 'package:audiobookflow/screens/audiobook_player/audiobook_player.dart';
 import 'package:audiobookflow/screens/audiobook_player/widgets/favourite_button.dart';
 import 'package:audiobookflow/screens/download_audiobook/widget/download_button.dart';
 import 'package:provider/provider.dart';
+import 'package:audiobookflow/resources/services/download/download_manager.dart';
 import 'package:we_slide/we_slide.dart';
 
 class MiniAudioPlayer extends StatefulWidget {
@@ -56,21 +57,28 @@ class _MiniAudioPlayerState extends State<MiniAudioPlayer> {
     if (audiobookMap == null) return;
 
     final audiobook = Audiobook.fromMap(Map<String, dynamic>.from(audiobookMap));
-    final handlerIsEmpty =
-        provider.audioHandler.getAudioSourcesFromPlaylist().isEmpty;
-    if (!handlerIsEmpty && _initializedAudiobookId == audiobook.id) {
-      return; // already initialized with this book
-    }
+    
+    // Defer initialization to avoid blocking startup
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final handlerIsEmpty =
+          provider.audioHandler.getAudioSourcesFromPlaylist().isEmpty;
+      if (!handlerIsEmpty && _initializedAudiobookId == audiobook.id) {
+        return; // already initialized with this book
+      }
 
-    final files = (box.get('audiobookFiles') as List)
-        .map((e) => AudiobookFile.fromMap(Map<String, dynamic>.from(e)))
-        .toList();
-    final index = box.get('index') as int;
-    final position = box.get('position') as int;
+      final files = (box.get('audiobookFiles') as List)
+          .map((e) => AudiobookFile.fromMap(Map<String, dynamic>.from(e)))
+          .toList();
+      final index = box.get('index') as int;
+      final position = box.get('position') as int;
 
-    provider.audioHandler.initSongs(files, audiobook, index, position, playImmediately: false);
-    _initializedAudiobookId = audiobook.id;
+      provider.audioHandler.initSongs(files, audiobook, index, position, playImmediately: false);
+      _initializedAudiobookId = audiobook.id;
+    });
   }
+
+  static String _safeDirectoryName(String id) =>
+      id.replaceAll(RegExp(r'[^a-zA-Z0-9\-_.]'), '_');
 
   Widget _buildSliderIndicator() {
     return Container(
@@ -170,114 +178,108 @@ class _MiniAudioPlayerState extends State<MiniAudioPlayer> {
                         ? (audiobook.author ?? mediaItem.artist ?? '')
                         : mediaItem.title;
 
-                    return Padding(
-                      padding: const EdgeInsets.all(8.0),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        crossAxisAlignment: CrossAxisAlignment.center,
-                        children: [
-                          Row(
+                    final audiobookId = _safeDirectoryName(audiobook.id);
+                    final isDownloaded = DownloadManager().isDownloaded(audiobookId);
+                    final isDownloading = DownloadManager().isDownloading(audiobookId);
+                    final progress = DownloadManager().getProgress(audiobookId);
+
+                    return Column(
+                      children: [
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 8.0),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            crossAxisAlignment: CrossAxisAlignment.center,
                             children: [
-                              ClipRRect(
-                                borderRadius: BorderRadius.circular(6),
-                                child: _coverImage(mediaItem),
+                              Row(
+                                children: [
+                                  ClipRRect(
+                                    borderRadius: BorderRadius.circular(6),
+                                    child: _coverImage(mediaItem),
+                                  ),
+                                  const SizedBox(width: 10),
+                                  SizedBox(
+                                    width: MediaQuery.of(context).size.width * 0.4,
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      mainAxisAlignment: MainAxisAlignment.center,
+                                      children: [
+                                        Text(
+                                          mediaItem.album ?? "",
+                                          style: const TextStyle(color: Colors.white),
+                                          overflow: TextOverflow.ellipsis,
+                                          maxLines: 1,
+                                        ),
+                                        Text(
+                                          secondaryLine,
+                                          style: const TextStyle(color: Colors.white),
+                                          overflow: TextOverflow.ellipsis,
+                                          maxLines: 1,
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ],
                               ),
-                              const SizedBox(width: 10),
                               SizedBox(
-                                width: MediaQuery.of(context).size.width * 0.4,
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  children: [
-                                    ValueListenableBuilder<bool>(
-                                      valueListenable: handler.sleepTimer.isActive,
-                                      builder: (context, isActive, child) {
-                                        if (!isActive) return const SizedBox.shrink();
-                                        return ValueListenableBuilder<Duration?>(
-                                          valueListenable: handler.sleepTimer.remainingTime,
-                                          builder: (context, remaining, child) {
-                                            if (remaining == null) return const SizedBox.shrink();
-                                            final minutes = remaining.inMinutes;
-                                            final seconds = remaining.inSeconds % 60;
-                                            return Padding(
-                                              padding: const EdgeInsets.only(bottom: 2),
-                                              child: Row(
-                                                mainAxisSize: MainAxisSize.min,
-                                                children: [
-                                                  const Icon(Icons.snooze, size: 10, color: Colors.deepOrange),
-                                                  const SizedBox(width: 4),
-                                                  Text(
-                                                    '${minutes.toString().padLeft(2, '0')}:${seconds.toString().padLeft(2, '0')}',
-                                                    style: const TextStyle(
-                                                      color: Colors.deepOrange,
-                                                      fontSize: 10,
-                                                      fontWeight: FontWeight.bold,
-                                                    ),
+                                width: 130,
+                                height: 48,
+                                child: StreamBuilder<PlaybackState>(
+                                  stream: handler.playbackState,
+                                  builder: (context, s) {
+                                    final st = s.data;
+                                    final playing = st?.playing ?? false;
+                                    final isLoading = st?.processingState == AudioProcessingState.loading;
+                                    return Row(
+                                      mainAxisAlignment: MainAxisAlignment.end,
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        DownloadButton(
+                                          audiobook: audiobook,
+                                          audiobookFiles: files,
+                                        ),
+                                        FavouriteButton(
+                                          audiobook: audiobook,
+                                          size: 24,
+                                        ),
+                                        isLoading
+                                            ? const SizedBox(
+                                                width: 48,
+                                                height: 48,
+                                                child: Padding(
+                                                  padding: EdgeInsets.all(12.0),
+                                                  child: CircularProgressIndicator(
+                                                    strokeWidth: 2.0,
+                                                    color: Colors.white,
                                                   ),
-                                                ],
+                                                ),
+                                              )
+                                            : IconButton(
+                                                icon: Icon(
+                                                  playing ? Icons.pause : Icons.play_arrow,
+                                                  color: isDownloaded ? Colors.green : Colors.white,
+                                                ),
+                                                onPressed: () =>
+                                                    playing ? handler.pause() : handler.play(),
                                               ),
-                                            );
-                                          },
-                                        );
-                                      },
-                                    ),
-                                    Text(
-                                      mediaItem.album ?? "",
-                                      style: const TextStyle(color: Colors.white),
-                                      overflow: TextOverflow.ellipsis,
-                                      maxLines: 1,
-                                    ),
-                                    Text(
-                                      secondaryLine,
-                                      style: const TextStyle(color: Colors.white),
-                                      overflow: TextOverflow.ellipsis,
-                                      maxLines: 1,
-                                    ),
-                                  ],
+                                      ],
+                                    );
+                                  },
                                 ),
                               ),
                             ],
                           ),
-                          StreamBuilder<PlaybackState>(
-                            stream: handler.playbackState,
-                            builder: (context, s) {
-                              final st = s.data;
-                              final loading = st?.processingState ==
-                                      AudioProcessingState.loading ||
-                                  st?.processingState ==
-                                      AudioProcessingState.buffering;
-                              if (loading) {
-                                return const CircularProgressIndicator(
-                                  color: AppColors.primaryColor,
-                                  strokeWidth: 2,
-                                );
-                              }
-                              final playing = st?.playing ?? false;
-                              return Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  DownloadButton(
-                                    audiobook: audiobook,
-                                    audiobookFiles: files,
-                                  ),
-                                  FavouriteButton(
-                                    audiobook: audiobook,
-                                    size: 24,
-                                  ),
-                                  IconButton(
-                                    icon: Icon(
-                                      playing ? Icons.pause : Icons.play_arrow,
-                                      color: Colors.white,
-                                    ),
-                                    onPressed: () =>
-                                        playing ? handler.pause() : handler.play(),
-                                  ),
-                                ],
-                              );
-                            },
+                        ),
+                        if (isDownloading)
+                          Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 8.0),
+                            child: LinearProgressIndicator(
+                              value: progress,
+                              backgroundColor: Colors.white10,
+                              color: Colors.deepOrange,
+                            ),
                           ),
-                        ],
-                      ),
+                      ],
                     );
                   },
                 ),

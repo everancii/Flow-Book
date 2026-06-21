@@ -90,10 +90,10 @@ class YouTubeAudioSource extends StreamAudioSource {
     // Try manifest fetch with timeout and fallback clients
     StreamManifest? manifest;
     final clients = [
+      (YoutubeApiClient.androidMusic, true),
+      (YoutubeApiClient.android, true),
       (YoutubeApiClient.androidVr, true),
       (YoutubeApiClient.ios, true),
-      (YoutubeApiClient.android, true),
-      (YoutubeApiClient.androidMusic, true),
     ];
 
     for (final (client, requireWatch) in clients) {
@@ -102,7 +102,7 @@ class YouTubeAudioSource extends StreamAudioSource {
           resolvedVideoId,
           requireWatchPage: requireWatch,
           ytClients: [client],
-        ).timeout(const Duration(seconds: 15));
+        ).timeout(const Duration(seconds: 30));
         AppLogger.debug('YouTubeAudioSource: got manifest with client $client');
         break;
       } catch (e) {

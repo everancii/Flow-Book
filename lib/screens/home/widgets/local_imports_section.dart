@@ -25,8 +25,9 @@ class _LocalImportsSectionState extends State<LocalImportsSection> {
   @override
   void initState() {
     super.initState();
-    _loadRootFolder();
-
+    // Removed _loadRootFolder() to prevent startup spinner.
+    // Call it manually when needed or in a deferred manner.
+    
     // Listen for directory changes from settings
     _directoryChangeSubscription =
         AppEvents.localDirectoryChanged.stream.listen((_) {

@@ -382,29 +382,23 @@ class _AudiobookPlayerState extends State<AudiobookPlayer> {
         }
         final MediaItem mediaItem = snapshot.data!;
 
-        // Decide what to show for title/subtitle when there's only one track.
-        // We read the same Hive box you already use to persist "now playing".
         final box = playingAudiobookDetailsBox;
         final filesDyn = box.get('audiobookFiles') as List?;
         final isSingleTrack = (filesDyn?.length ?? 0) <= 1;
 
-        // Prefer author from our stored Audiobook; fall back to MediaItem.artist.
-        String? authorFromBox;
         final audiobookMap = box.get('audiobook');
-        if (audiobookMap != null) {
-          authorFromBox = Audiobook.fromMap(
-            Map<String, dynamic>.from(audiobookMap as Map),
-          ).author;
-        }
+        if (audiobookMap == null) return const SizedBox.shrink();
+        audiobook = Audiobook.fromMap(
+          Map<String, dynamic>.from(audiobookMap as Map),
+        );
 
-        // Titles to render in the app bar and in the large title below the cover.
         final headerTitle = isSingleTrack
             ? (mediaItem.album ?? mediaItem.title)
             : mediaItem.title;
         final headerSubtitle = isSingleTrack
-            ? (authorFromBox ?? mediaItem.artist ?? 'Unknown')
+            ? (audiobook.author ?? mediaItem.artist ?? 'Unknown')
             : (mediaItem.artist ?? 'Unknown');
-        final contentTitle = headerTitle; // keep the big center title in sync
+        final contentTitle = headerTitle;
 
         return Scaffold(
           appBar: AppBar(
@@ -642,6 +636,23 @@ class _AudiobookPlayerState extends State<AudiobookPlayer> {
                             ),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
+                          ),
+                          const SizedBox(height: 4),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 8, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: Colors.deepOrange.withValues(alpha: 0.1),
+                              borderRadius: BorderRadius.circular(4),
+                            ),
+                            child: Text(
+                              (audiobook.origin ?? 'Unknown').toUpperCase(),
+                              style: TextStyle(
+                                fontSize: 10,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.deepOrange,
+                              ),
+                            ),
                           ),
                         ],
                       ),
