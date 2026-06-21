@@ -2,6 +2,7 @@ import 'dart:io';
 
 import 'package:audiobookflow/resources/designs/theme_notifier.dart';
 import 'package:audiobookflow/resources/designs/themes.dart';
+import 'package:audiobookflow/resources/services/download/download_manager.dart';
 import 'package:audiobookflow/resources/services/youtube/youtube_audiobook_notifier.dart';
 import 'package:audiobookflow/resources/services/youtube/webview_keep_alive_provider.dart';
 import 'package:audiobookflow/screens/recommendation/recommendation_screen.dart';
@@ -90,6 +91,8 @@ Future<void> initHive() async {
   Box recommendedAudiobooksBox = Hive.box('recommened_audiobooks_box');
 
   isRecommendScreen = recommendedAudiobooksBox.isEmpty ? 1 : 0;
+
+  DownloadManager().cleanStaleStatuses();
 }
 
 final _rootNavigatorKey = GlobalKey<NavigatorState>();
