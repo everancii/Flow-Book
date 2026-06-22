@@ -227,8 +227,10 @@ class _ControlsState extends State<Controls> {
                 final st = snapshot.data;
                 final isPlaying = st?.playing ?? false;
                 final isLoading = st?.processingState == AudioProcessingState.loading;
+                final isBuffering = st?.processingState == AudioProcessingState.buffering;
+                final showLoading = isLoading || (isBuffering && widget.audioHandler.isBufferingYouTube.value && !isPlaying);
 
-                if (isLoading) {
+                if (showLoading) {
                   return SizedBox(
                     width: 61,
                     height: 61,

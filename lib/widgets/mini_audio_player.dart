@@ -141,7 +141,10 @@ class _MiniAudioPlayerState extends State<MiniAudioPlayer> {
         keyboardOpen ? const SizedBox.shrink() : widget.bottomNavigationBar;
     final panelMin = keyboardOpen ? 0.0 : (80 + widget.bottomNavBarSize);
 
-    return WeSlide(
+    return ListenableBuilder(
+      listenable: handler.isBufferingYouTube,
+      builder: (context, _) {
+        return WeSlide(
       controller: weSlideController,
       panelMinSize: panelMin,
       panelMaxSize: panelMaxSize,
@@ -232,6 +235,8 @@ class _MiniAudioPlayerState extends State<MiniAudioPlayer> {
                                     final st = s.data;
                                     final playing = st?.playing ?? false;
                                     final isLoading = st?.processingState == AudioProcessingState.loading;
+                                    final isBuffering = st?.processingState == AudioProcessingState.buffering;
+                                    final showLoading = isLoading || (isBuffering && handler.isBufferingYouTube.value);
                                     return Row(
                                       mainAxisAlignment: MainAxisAlignment.end,
                                       mainAxisSize: MainAxisSize.min,
@@ -244,7 +249,7 @@ class _MiniAudioPlayerState extends State<MiniAudioPlayer> {
                                           audiobook: audiobook,
                                           size: 24,
                                         ),
-                                        isLoading
+                                        showLoading
                                             ? const SizedBox(
                                                 width: 48,
                                                 height: 48,
@@ -290,6 +295,8 @@ class _MiniAudioPlayerState extends State<MiniAudioPlayer> {
           ),
         ),
       ),
+      );
+      },
     );
   }
 }

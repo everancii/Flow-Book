@@ -401,17 +401,20 @@ class _SettingsState extends State<Settings> {
           ListTile(
             leading: const Icon(Icons.search),
             title: const Text('Search Sources'),
-            subtitle: Wrap(
-              spacing: 6,
-              runSpacing: -8,
-              children: _enabledSources
-                  .map((s) => Chip(
-                        label: Text(_sourceLabels[s] ?? s),
-                        visualDensity: VisualDensity.compact,
-                        materialTapTargetSize:
-                            MaterialTapTargetSize.shrinkWrap,
-                      ))
-                  .toList(),
+            subtitle: Padding(
+              padding: const EdgeInsets.only(top: 4),
+              child: Wrap(
+                spacing: 6,
+                runSpacing: 4,
+                children: _enabledSources
+                    .map((s) => Chip(
+                          label: Text(_sourceLabels[s] ?? s),
+                          visualDensity: VisualDensity.compact,
+                          materialTapTargetSize:
+                              MaterialTapTargetSize.shrinkWrap,
+                        ))
+                    .toList(),
+              ),
             ),
             trailing: const Icon(Icons.edit),
             onTap: _editSearchSources,

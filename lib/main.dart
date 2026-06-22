@@ -90,7 +90,7 @@ Future<void> initHive() async {
   await Hive.openBox('settings');
   Box recommendedAudiobooksBox = Hive.box('recommened_audiobooks_box');
 
-  isRecommendScreen = recommendedAudiobooksBox.isEmpty ? 1 : 0;
+  isRecommendScreen = 0;
 
   DownloadManager().cleanStaleStatuses();
 }

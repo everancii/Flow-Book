@@ -1,6 +1,7 @@
 // lib/resources/services/my_audio_handler.dart
 import 'dart:async';
 import 'dart:io';
+import 'package:flutter/foundation.dart';
 
 import 'package:audiobookflow/resources/models/audiobook.dart';
 import 'package:audiobookflow/resources/models/audiobook_file.dart';
@@ -74,6 +75,9 @@ class MyAudioHandler extends BaseAudioHandler {
   StreamSubscription<PlaybackEvent>? _eventSub;
   StreamSubscription<PlayerState>? _playerStateSub;
   StreamSubscription<bool>? _playingSub;
+
+  // Global YouTube buffering indicator
+  final ValueNotifier<bool> isBufferingYouTube = ValueNotifier(false);
 
   Future<void> _persistInstant() async {
     if (!_canPersistProgress || _isReinitializing) return;
@@ -509,6 +513,13 @@ class MyAudioHandler extends BaseAudioHandler {
       ProcessingState.ready: AudioProcessingState.ready,
       ProcessingState.completed: AudioProcessingState.completed,
     }[processing]!;
+
+    // Update YouTube buffering state (only when NOT playing yet)
+    final currentIndex = _player.currentIndex;
+    final isYT = currentIndex != null && _isIndexYouTube(currentIndex);
+    final needsBuffering = (processing == ProcessingState.buffering ||
+        processing == ProcessingState.loading) && !playing;
+    isBufferingYouTube.value = isYT && needsBuffering;
 
     final controls = <MediaControl>[
       MediaControl.skipToPrevious,

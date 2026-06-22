@@ -57,6 +57,8 @@ class _AudiobookDetailsState extends State<AudiobookDetails> {
   StreamSubscription? _downloadSub;
   double _downloadProgress = 0.0;
   bool _isDownloading = false;
+  bool _isBufferingYouTube = false;
+  bool _bufferingListenerSetup = false;
 
   Future<void> _playChapter(List<AudiobookFile> files, int index) async {
     try {
@@ -181,9 +183,26 @@ class _AudiobookDetailsState extends State<AudiobookDetails> {
     });
   }
 
+  void _setupYouTubeBufferingListener() {
+    if (_bufferingListenerSetup) return;
+    _bufferingListenerSetup = true;
+    final handler = audioHandlerProvider.audioHandler;
+    _isBufferingYouTube = handler.isBufferingYouTube.value;
+    handler.isBufferingYouTube.addListener(_onYouTubeBufferingChanged);
+  }
+
+  void _onYouTubeBufferingChanged() {
+    if (mounted) {
+      setState(() {
+        _isBufferingYouTube = audioHandlerProvider.audioHandler.isBufferingYouTube.value;
+      });
+    }
+  }
+
   @override
   void dispose() {
     _downloadSub?.cancel();
+    audioHandlerProvider.audioHandler.isBufferingYouTube.removeListener(_onYouTubeBufferingChanged);
     super.dispose();
   }
 
@@ -192,6 +211,7 @@ class _AudiobookDetailsState extends State<AudiobookDetails> {
     super.didChangeDependencies();
     _weSlideController = Provider.of<WeSlideController>(context);
     audioHandlerProvider = Provider.of<AudioHandlerProvider>(context);
+    _setupYouTubeBufferingListener();
   }
 
   @override
@@ -377,56 +397,68 @@ class _AudiobookDetailsState extends State<AudiobookDetails> {
                           ),
                         const SizedBox(height: 16),
                         Center(
-                          child: Material(
-                            shape: const CircleBorder(),
-                            color: AppColors.primaryColor,
-                            child: InkWell(
-                              customBorder: const CircleBorder(),
-                              onTap: () {
-                                playingAudiobookDetailsBox.put(
-                                    'audiobook', widget.audiobook.toMap());
-                                playingAudiobookDetailsBox.put(
-                                    'audiobookFiles',
-                                    state.audiobookFiles
-                                        .map((e) => e.toMap())
-                                        .toList());
+                          child: _isBufferingYouTube
+                              ? const SizedBox(
+                                  width: 72,
+                                  height: 72,
+                                  child: Center(
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 3,
+                                      color: AppColors.primaryColor,
+                                    ),
+                                  ),
+                                )
+                              : Material(
+                                  shape: const CircleBorder(),
+                                  color: AppColors.primaryColor,
+                                  child: InkWell(
+                                    customBorder: const CircleBorder(),
+                                    onTap: () {
+                                      playingAudiobookDetailsBox.put(
+                                          'audiobook', widget.audiobook.toMap());
+                                      playingAudiobookDetailsBox.put(
+                                        'audiobookFiles',
+                                        state.audiobookFiles
+                                            .map((e) => e.toMap())
+                                            .toList(),
+                                      );
 
-                                if (historyOfAudiobook
-                                    .isAudiobookInHistory(widget.audiobook.id)) {
-                                  final historyItem = historyOfAudiobook
-                                      .getHistoryOfAudiobookItem(widget.audiobook.id);
-                                  audioHandlerProvider.audioHandler.initSongs(
-                                    state.audiobookFiles,
-                                    widget.audiobook,
-                                    historyItem.index,
-                                    historyItem.position,
-                                  );
-                                  playingAudiobookDetailsBox.put('index', historyItem.index);
-                                  playingAudiobookDetailsBox.put('position', historyItem.position);
-                                } else {
-                                  playingAudiobookDetailsBox.put('index', 0);
-                                  playingAudiobookDetailsBox.put('position', 0);
-                                  audioHandlerProvider.audioHandler.initSongs(
-                                    state.audiobookFiles,
-                                    widget.audiobook,
-                                    0,
-                                    0,
-                                  );
-                                }
+                                      if (historyOfAudiobook
+                                          .isAudiobookInHistory(widget.audiobook.id)) {
+                                        final historyItem = historyOfAudiobook
+                                            .getHistoryOfAudiobookItem(widget.audiobook.id);
+                                        audioHandlerProvider.audioHandler.initSongs(
+                                          state.audiobookFiles,
+                                          widget.audiobook,
+                                          historyItem.index,
+                                          historyItem.position,
+                                        );
+                                        playingAudiobookDetailsBox.put('index', historyItem.index);
+                                        playingAudiobookDetailsBox.put('position', historyItem.position);
+                                      } else {
+                                        playingAudiobookDetailsBox.put('index', 0);
+                                        playingAudiobookDetailsBox.put('position', 0);
+                                        audioHandlerProvider.audioHandler.initSongs(
+                                          state.audiobookFiles,
+                                          widget.audiobook,
+                                          0,
+                                          0,
+                                        );
+                                      }
 
-                                _weSlideController.show();
-                              },
-                              child: const SizedBox(
-                                width: 72,
-                                height: 72,
-                                child: Icon(
-                                  Icons.play_arrow,
-                                  size: 36,
-                                  color: Colors.white,
+                                      _weSlideController.show();
+                                    },
+                                    child: const SizedBox(
+                                      width: 72,
+                                      height: 72,
+                                      child: Icon(
+                                        Icons.play_arrow,
+                                        size: 36,
+                                        color: Colors.white,
+                                      ),
+                                    ),
+                                  ),
                                 ),
-                              ),
-                            ),
-                          ),
                         ),
                         const SizedBox(height: 16),
                         Column(
@@ -471,6 +503,8 @@ class _AudiobookDetailsState extends State<AudiobookDetails> {
                                     shrinkWrap: true,
                                     physics: const NeverScrollableScrollPhysics(),
                                     itemBuilder: (context, index) {
+                                      final isCurrentTrack = _isBufferingYouTube &&
+                                          audioHandlerProvider.audioHandler.currentIndex == index;
                                       return ListTile(
                                           onTap: () => _playChapter(
                                                 state.audiobookFiles,
@@ -487,13 +521,22 @@ class _AudiobookDetailsState extends State<AudiobookDetails> {
                                           subtitle: _durationSubtitle(
                                             state.audiobookFiles[index],
                                           ),
-                                          trailing: IconButton(
-                                            onPressed: () => _playChapter(
-                                              state.audiobookFiles,
-                                              index,
-                                            ),
-                                            icon: const Icon(Icons.play_arrow),
-                                          ));
+                                          trailing: isCurrentTrack
+                                              ? const SizedBox(
+                                                  width: 24,
+                                                  height: 24,
+                                                  child: CircularProgressIndicator(
+                                                    strokeWidth: 2,
+                                                    color: AppColors.primaryColor,
+                                                  ),
+                                                )
+                                              : IconButton(
+                                                  onPressed: () => _playChapter(
+                                                    state.audiobookFiles,
+                                                    index,
+                                                  ),
+                                                  icon: const Icon(Icons.play_arrow),
+                                                ));
                                     },
                                   ),
                                 ],
