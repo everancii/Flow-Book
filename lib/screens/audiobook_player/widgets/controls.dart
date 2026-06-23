@@ -2,7 +2,6 @@ import 'package:audiobookflow/resources/services/my_audio_handler.dart';
 import 'package:audio_service/audio_service.dart';
 import 'package:flutter/material.dart';
 
-import '../../../resources/designs/app_colors.dart';
 import 'characters_dialog.dart';
 
 class Controls extends StatefulWidget {
@@ -235,12 +234,36 @@ class _ControlsState extends State<Controls> {
                     width: 61,
                     height: 61,
                     child: Padding(
-                      padding: const EdgeInsets.all(12.0),
-                      child: CircularProgressIndicator(
-                        strokeWidth: 3.0,
-                        color: Theme.of(context).brightness == Brightness.dark
-                            ? Colors.white
-                            : Colors.black,
+                      padding: const EdgeInsets.all(6.0),
+                      child: AnimatedBuilder(
+                        animation: widget.audioHandler.bufferingProgress,
+                        builder: (context, _) {
+                          final p = widget.audioHandler.bufferingProgress.value;
+                          final color =
+                              Theme.of(context).brightness == Brightness.dark
+                                  ? Colors.white
+                                  : Colors.black;
+                          return Stack(
+                            alignment: Alignment.center,
+                            children: [
+                              CircularProgressIndicator(
+                                value: p > 0 ? p : null,
+                                strokeWidth: 3.0,
+                                color: color,
+                                backgroundColor:
+                                    color.withValues(alpha: 0.15),
+                              ),
+                              Text(
+                                p > 0 ? '${(p * 100).toInt()}%' : '',
+                                style: TextStyle(
+                                  fontSize: 9,
+                                  fontWeight: FontWeight.w700,
+                                  color: color,
+                                ),
+                              ),
+                            ],
+                          );
+                        },
                       ),
                     ),
                   );

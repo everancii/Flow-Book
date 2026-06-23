@@ -4,11 +4,13 @@ class AppEvents {
   /// Fire when visible languages change. Listeners should refresh their data.
   static final languagesChanged = StreamController<void>.broadcast();
 
-  /// Fire when local audiobooks directory changes. Listeners should refresh their data.
-  static final localDirectoryChanged = StreamController<void>.broadcast();
+  /// Fire when the enabled search sources change (from Settings). Listeners
+  /// (search chips, search BLoC) should refresh so the change takes effect
+  /// without needing to leave and re-enter the Search tab.
+  static final searchSourcesChanged = StreamController<void>.broadcast();
 
   static void dispose() {
     languagesChanged.close();
-    localDirectoryChanged.close();
+    searchSourcesChanged.close();
   }
 }

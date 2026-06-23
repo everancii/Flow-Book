@@ -75,9 +75,16 @@ class MyAudioHandler extends BaseAudioHandler {
   StreamSubscription<PlaybackEvent>? _eventSub;
   StreamSubscription<PlayerState>? _playerStateSub;
   StreamSubscription<bool>? _playingSub;
+  StreamSubscription<Duration>? _bufferedSub;
 
   // Global YouTube buffering indicator
   final ValueNotifier<bool> isBufferingYouTube = ValueNotifier(false);
+
+  /// Buffered-ahead fraction (0.0–1.0) of the current track while it loads,
+  /// computed from `bufferedPosition / duration`. Lets the UI show a real
+  /// percentage instead of a bare spinner while buffering. `0.0` when not
+  /// buffering or when the duration is unknown.
+  final ValueNotifier<double> bufferingProgress = ValueNotifier(0.0);
 
   Future<void> _persistInstant() async {
     if (!_canPersistProgress || _isReinitializing) return;
@@ -130,6 +137,7 @@ class MyAudioHandler extends BaseAudioHandler {
     _eventSub?.cancel();
     _playerStateSub?.cancel();
     _playingSub?.cancel();
+    _bufferedSub?.cancel();
     _coverSub?.cancel();
 
     _eventSub = _player.playbackEventStream.listen(_broadcastState);
@@ -138,6 +146,19 @@ class MyAudioHandler extends BaseAudioHandler {
     });
     _playingSub = _player.playingStream.listen((_) {
       _broadcastState(_player.playbackEvent);
+    });
+    // Keep bufferingProgress ticking smoothly while the track pre-loads,
+    // so play buttons can render a live % instead of a bare spinner.
+    _bufferedSub = _player.bufferedPositionStream.listen((buffered) {
+      if (!isBufferingYouTube.value) return;
+      final duration = _player.duration;
+      if (duration != null && duration.inMilliseconds > 0) {
+        final frac = buffered.inMilliseconds / duration.inMilliseconds;
+        final clamped = frac.clamp(0.0, 1.0);
+        if ((bufferingProgress.value - clamped).abs() >= 0.005) {
+          bufferingProgress.value = clamped;
+        }
+      }
     });
 
     // swap art immediately if the active audiobook’s cover mapping changes
@@ -520,6 +541,21 @@ class MyAudioHandler extends BaseAudioHandler {
     final needsBuffering = (processing == ProcessingState.buffering ||
         processing == ProcessingState.loading) && !playing;
     isBufferingYouTube.value = isYT && needsBuffering;
+
+    // Update buffering progress so play buttons can show a real %.
+    // While actively buffering/loading, report bufferedPosition/duration.
+    if (needsBuffering) {
+      final duration = _player.duration;
+      final buffered = _player.bufferedPosition;
+      if (duration != null && duration.inMilliseconds > 0) {
+        final frac = buffered.inMilliseconds / duration.inMilliseconds;
+        bufferingProgress.value = frac.clamp(0.0, 1.0);
+      } else {
+        bufferingProgress.value = 0.0;
+      }
+    } else {
+      bufferingProgress.value = 0.0;
+    }
 
     final controls = <MediaControl>[
       MediaControl.skipToPrevious,

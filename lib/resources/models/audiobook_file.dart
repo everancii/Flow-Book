@@ -384,8 +384,13 @@ class AudiobookFile {
   }
 
   /// Fetches playlist video IDs via YouTube's internal API.
+  ///
+  /// [onProgress] is invoked as pages are fetched with the 1-based page number
+  /// being loaded and the total number of videos collected so far, so callers
+  /// can report "Loading videos (page N) • M loaded" to the user.
   static Future<List<Map<String, String>>> fetchPlaylistVideosViaHttp(
-      String playlistId) async {
+      String playlistId,
+      {void Function(int page, int loaded)? onProgress}) async {
     final videos = <Map<String, String>>[];
 
     try {
@@ -460,10 +465,15 @@ class AudiobookFile {
 
       AppLogger.debug('fetchPlaylistVideosViaHttp: found ${videos.length} videos from API');
 
+      // Report the initial page (page 1) result.
+      onProgress?.call(1, videos.length);
+
       // Fetch additional pages via continuation tokens
       int maxPages = 10;
       int page = 0;
       while (continuationToken != null && page < maxPages && videos.length < 100) {
+        // Report "loading page N" (continuation pages are page 2, 3, …).
+        onProgress?.call(page + 2, videos.length);
         try {
           final contResponse = await http.post(
             apiUrl,

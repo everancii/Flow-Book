@@ -1,6 +1,7 @@
 import 'package:audiobookflow/resources/designs/app_colors.dart';
 import 'package:audiobookflow/resources/services/four_read/four_read_audiobook_notifier.dart';
 import 'package:audiobookflow/widgets/audiobook_item.dart';
+import 'package:audiobookflow/widgets/flow_loading_indicator.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -83,7 +84,10 @@ class _FourReadImportsSectionState extends State<FourReadImportsSection> {
             builder: (context, notifier, child) {
               if (notifier.isLoading) {
                 return const Center(
-                  child: CircularProgressIndicator(),
+                  child: FlowLoadingIndicator(
+                    label: 'Loading imports…',
+                    showElapsed: true,
+                  ),
                 );
               }
 
@@ -189,7 +193,10 @@ class _FourReadImportsSectionState extends State<FourReadImportsSection> {
                                     context: context,
                                     barrierDismissible: false,
                                     builder: (context) => const Center(
-                                      child: CircularProgressIndicator(),
+                                      child: FlowLoadingIndicator(
+                                        label: 'Deleting…',
+                                        showElapsed: true,
+                                      ),
                                     ),
                                   );
 

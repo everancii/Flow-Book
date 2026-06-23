@@ -1,9 +1,9 @@
-import 'package:audiobookflow/resources/designs/app_circular_progress_indicator.dart';
 import 'package:audiobookflow/resources/designs/app_colors.dart';
 import 'package:audiobookflow/resources/models/audiobook.dart';
 import 'package:audiobookflow/resources/services/four_read/four_read_open_guard.dart';
 import 'package:audiobookflow/resources/services/four_read/four_read_open_telemetry.dart';
 import 'package:audiobookflow/screens/four_read_top/bloc/four_read_top_bloc.dart';
+import 'package:audiobookflow/widgets/flow_loading_indicator.dart';
 import 'package:audiobookflow/widgets/low_and_high_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -50,7 +50,12 @@ class _FourReadTopScreenState extends State<FourReadTopScreen> {
         body: BlocBuilder<FourReadTopBloc, FourReadTopState>(
           builder: (context, state) {
             if (state is FourReadTopLoading || state is FourReadTopInitial) {
-              return const Center(child: AppCircularProgressIndicator());
+              return const Center(
+                child: FlowLoadingIndicator(
+                  label: 'Loading Top 100…',
+                  showElapsed: true,
+                ),
+              );
             }
             if (state is FourReadTopError) {
               return _ErrorView(

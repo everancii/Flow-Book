@@ -1,9 +1,13 @@
+import 'dart:async';
+
 import 'package:audiobookflow/resources/designs/app_colors.dart';
 import 'package:audiobookflow/resources/models/audiobook.dart';
 import 'package:audiobookflow/resources/services/four_read/four_read_open_guard.dart';
 import 'package:audiobookflow/resources/services/four_read/four_read_open_telemetry.dart';
 import 'package:audiobookflow/screens/search/bloc/search_bloc.dart';
 import 'package:audiobookflow/utils/app_constants.dart';
+import 'package:audiobookflow/utils/app_events.dart';
+import 'package:audiobookflow/widgets/flow_loading_indicator.dart';
 import 'package:audiobookflow/widgets/low_and_high_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -25,6 +29,7 @@ class _SearchAudiobookState extends State<SearchAudiobook> {
 
   SearchSourceSelection sourceSelection = SearchSourceSelection.all;
   bool isLoadingMore = false;
+  StreamSubscription<void>? _sourcesSub;
 
   @override
   void initState() {
@@ -46,10 +51,24 @@ class _SearchAudiobookState extends State<SearchAudiobook> {
         searchBloc.add(EventLoadMoreResults());
       }
     });
+
+    // Rebuild the source chips when the user changes enabled sources in
+    // Settings, so the change takes effect without leaving the Search tab.
+    _sourcesSub = AppEvents.searchSourcesChanged.stream.listen((_) {
+      if (!mounted) return;
+      final enabled = _enabledSourceKeys();
+      // If the currently-selected source was disabled, fall back to "All".
+      if (sourceSelection != SearchSourceSelection.all &&
+          !_selectionEnabled(sourceSelection, enabled)) {
+        sourceSelection = SearchSourceSelection.all;
+      }
+      setState(() {});
+    });
   }
 
   @override
   void dispose() {
+    _sourcesSub?.cancel();
     _scrollController.dispose();
     _searchController.dispose();
     super.dispose();
@@ -66,6 +85,28 @@ class _SearchAudiobookState extends State<SearchAudiobook> {
         sourceSelection: sourceSelection,
       ),
     );
+  }
+
+  /// Reads the currently-enabled search source keys from Settings.
+  List<String> _enabledSourceKeys() {
+    final box = Hive.box('settings');
+    return List<String>.from(
+      box.get('enabledSearchSources',
+          defaultValue: ['librivox', 'youtube', 'archiveOrg', 'fourRead', 'knigavuhe']),
+    );
+  }
+
+  /// Whether a [SearchSourceSelection] (other than "all") is still enabled
+  /// in Settings, given the list of enabled source keys.
+  bool _selectionEnabled(SearchSourceSelection sel, List<String> enabled) {
+    final key = const {
+      SearchSourceSelection.librivox: 'librivox',
+      SearchSourceSelection.youtube: 'youtube',
+      SearchSourceSelection.archiveOrg: 'archiveOrg',
+      SearchSourceSelection.fourRead: 'fourRead',
+      SearchSourceSelection.knigavuhe: 'knigavuhe',
+    }[sel];
+    return key == null || enabled.contains(key);
   }
 
   @override
@@ -203,9 +244,22 @@ class _SearchAudiobookState extends State<SearchAudiobook> {
                   return const _EmptyPrompt();
                 }
                 if (state is SearchLoading && !isLoadingMore) {
-                  return const Center(
-                    child: CircularProgressIndicator(
-                      color: AppColors.primaryColor,
+                  final fraction = state.totalSources > 0
+                      ? state.completedSources / state.totalSources
+                      : null;
+                  final readyDetail = state.totalSources > 0
+                      ? [
+                          '${state.completedSources} of ${state.totalSources} sources',
+                          if (state.readySources.isNotEmpty)
+                            state.readySources.join(', '),
+                        ].join(' • ')
+                      : null;
+                  return Center(
+                    child: FlowLoadingIndicator(
+                      value: fraction,
+                      label: 'Searching…',
+                      detail: readyDetail,
+                      showElapsed: true,
                     ),
                   );
                 }
@@ -327,12 +381,13 @@ class _SearchAudiobookState extends State<SearchAudiobook> {
 
                   if (isLoadingMore) {
                     slivers.add(
-                      const SliverToBoxAdapter(
+                      SliverToBoxAdapter(
                         child: Padding(
-                          padding: EdgeInsets.all(16),
+                          padding: const EdgeInsets.all(16),
                           child: Center(
-                            child: CircularProgressIndicator(
-                              color: AppColors.primaryColor,
+                            child: FlowLoadingIndicator(
+                              compact: true,
+                              label: 'Loading more…',
                             ),
                           ),
                         ),

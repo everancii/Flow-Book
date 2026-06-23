@@ -1,6 +1,7 @@
 import 'package:audiobookflow/resources/designs/app_colors.dart';
 import 'package:audiobookflow/resources/models/audiobook.dart';
 import 'package:audiobookflow/screens/knigavuhe_lists/bloc/knigavuhe_lists_bloc.dart';
+import 'package:audiobookflow/widgets/flow_loading_indicator.dart';
 import 'package:audiobookflow/widgets/low_and_high_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -124,7 +125,12 @@ class _KnigavuheListsScreenState extends State<KnigavuheListsScreen> {
         body: BlocBuilder<KnigavuheListsBloc, KnigavuheListsState>(
           builder: (context, state) {
             if (state is KnigavuheListsLoading || state is KnigavuheListsInitial) {
-              return const Center(child: CircularProgressIndicator(color: AppColors.primaryColor));
+              return const Center(
+                child: FlowLoadingIndicator(
+                  label: 'Loading Knigavuhe…',
+                  showElapsed: true,
+                ),
+              );
             }
             if (state is KnigavuheListsError) {
               return _ErrorView(

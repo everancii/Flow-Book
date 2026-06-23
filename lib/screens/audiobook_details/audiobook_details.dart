@@ -7,7 +7,6 @@ import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:hive/hive.dart';
 // import 'package:ionicons/ionicons.dart';
-import 'package:audiobookflow/resources/designs/app_circular_progress_indicator.dart';
 import 'package:audiobookflow/resources/designs/app_colors.dart';
 import 'package:audiobookflow/resources/models/audiobook.dart';
 import 'package:audiobookflow/resources/models/audiobook_file.dart';
@@ -16,6 +15,7 @@ import 'package:audiobookflow/screens/audiobook_details/bloc/audiobook_details_b
 import 'package:audiobookflow/screens/audiobook_details/widgets/description_text.dart';
 import 'package:audiobookflow/screens/download_audiobook/widget/download_button.dart';
 import 'package:audiobookflow/resources/services/audio_handler_provider.dart';
+import 'package:audiobookflow/widgets/flow_loading_indicator.dart';
 import 'package:audiobookflow/widgets/low_and_high_image.dart';
 import 'package:audiobookflow/widgets/rating_widget.dart';
 import 'package:provider/provider.dart';
@@ -58,6 +58,7 @@ class _AudiobookDetailsState extends State<AudiobookDetails> {
   double _downloadProgress = 0.0;
   bool _isDownloading = false;
   bool _isBufferingYouTube = false;
+  double _bufferingProgress = 0.0;
   bool _bufferingListenerSetup = false;
 
   Future<void> _playChapter(List<AudiobookFile> files, int index) async {
@@ -188,13 +189,25 @@ class _AudiobookDetailsState extends State<AudiobookDetails> {
     _bufferingListenerSetup = true;
     final handler = audioHandlerProvider.audioHandler;
     _isBufferingYouTube = handler.isBufferingYouTube.value;
+    _bufferingProgress = handler.bufferingProgress.value;
     handler.isBufferingYouTube.addListener(_onYouTubeBufferingChanged);
+    handler.bufferingProgress.addListener(_onBufferingProgressChanged);
   }
 
   void _onYouTubeBufferingChanged() {
     if (mounted) {
       setState(() {
-        _isBufferingYouTube = audioHandlerProvider.audioHandler.isBufferingYouTube.value;
+        _isBufferingYouTube =
+            audioHandlerProvider.audioHandler.isBufferingYouTube.value;
+      });
+    }
+  }
+
+  void _onBufferingProgressChanged() {
+    if (mounted) {
+      setState(() {
+        _bufferingProgress =
+            audioHandlerProvider.audioHandler.bufferingProgress.value;
       });
     }
   }
@@ -203,6 +216,7 @@ class _AudiobookDetailsState extends State<AudiobookDetails> {
   void dispose() {
     _downloadSub?.cancel();
     audioHandlerProvider.audioHandler.isBufferingYouTube.removeListener(_onYouTubeBufferingChanged);
+    audioHandlerProvider.audioHandler.bufferingProgress.removeListener(_onBufferingProgressChanged);
     super.dispose();
   }
 
@@ -319,10 +333,13 @@ class _AudiobookDetailsState extends State<AudiobookDetails> {
                   current is AudiobookDetailsLoaded,
               builder: (context, state) {
                 if (state is AudiobookDetailsInitial || state is AudiobookDetailsLoading) {
-                  return const Center(
+                  return Center(
                     child: Padding(
-                      padding: EdgeInsets.only(top: 100),
-                      child: AppCircularProgressIndicator(),
+                      padding: const EdgeInsets.only(top: 100),
+                      child: FlowLoadingIndicator(
+                        label: 'Loading details…',
+                        showElapsed: true,
+                      ),
                     ),
                   );
                 } else if (state is AudiobookDetailsLoaded) {
@@ -398,14 +415,37 @@ class _AudiobookDetailsState extends State<AudiobookDetails> {
                         const SizedBox(height: 16),
                         Center(
                           child: _isBufferingYouTube
-                              ? const SizedBox(
+                              ? SizedBox(
                                   width: 72,
                                   height: 72,
-                                  child: Center(
-                                    child: CircularProgressIndicator(
-                                      strokeWidth: 3,
-                                      color: AppColors.primaryColor,
-                                    ),
+                                  child: Stack(
+                                    alignment: Alignment.center,
+                                    children: [
+                                      SizedBox(
+                                        width: 72,
+                                        height: 72,
+                                        child: CircularProgressIndicator(
+                                          value: _bufferingProgress > 0
+                                              ? _bufferingProgress
+                                              : null,
+                                          strokeWidth: 3,
+                                          color: AppColors.primaryColor,
+                                          backgroundColor:
+                                              AppColors.primaryColor
+                                                  .withValues(alpha: 0.15),
+                                        ),
+                                      ),
+                                      Text(
+                                        _bufferingProgress > 0
+                                            ? '${(_bufferingProgress * 100).toInt()}%'
+                                            : '…',
+                                        style: GoogleFonts.ubuntu(
+                                          fontSize: 13,
+                                          fontWeight: FontWeight.w700,
+                                          color: AppColors.primaryColor,
+                                        ),
+                                      ),
+                                    ],
                                   ),
                                 )
                               : Material(
@@ -522,12 +562,33 @@ class _AudiobookDetailsState extends State<AudiobookDetails> {
                                             state.audiobookFiles[index],
                                           ),
                                           trailing: isCurrentTrack
-                                              ? const SizedBox(
+                                              ? SizedBox(
                                                   width: 24,
                                                   height: 24,
-                                                  child: CircularProgressIndicator(
-                                                    strokeWidth: 2,
-                                                    color: AppColors.primaryColor,
+                                                  child: Stack(
+                                                    alignment: Alignment.center,
+                                                    children: [
+                                                      CircularProgressIndicator(
+                                                        value: _bufferingProgress > 0
+                                                            ? _bufferingProgress
+                                                            : null,
+                                                        strokeWidth: 2,
+                                                        color: AppColors.primaryColor,
+                                                        backgroundColor:
+                                                            AppColors.primaryColor
+                                                                .withValues(alpha: 0.15),
+                                                      ),
+                                                      Text(
+                                                        _bufferingProgress > 0
+                                                            ? '${(_bufferingProgress * 100).toInt()}'
+                                                            : '',
+                                                        style: GoogleFonts.ubuntu(
+                                                          fontSize: 8,
+                                                          fontWeight: FontWeight.w700,
+                                                          color: AppColors.primaryColor,
+                                                        ),
+                                                      ),
+                                                    ],
                                                   ),
                                                 )
                                               : IconButton(

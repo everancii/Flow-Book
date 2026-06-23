@@ -5,6 +5,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:audiobookflow/resources/archive_api.dart';
 import 'package:audiobookflow/screens/genre_audiobooks/bloc/genre_audiobooks_bloc.dart';
 import 'package:audiobookflow/widgets/audiobook_item.dart';
+import 'package:audiobookflow/widgets/flow_loading_indicator.dart';
 
 class GenreAudiobooksScreen extends StatelessWidget {
   final String genre;
@@ -148,9 +149,10 @@ class _AudiobookListViewState extends State<_AudiobookListView>
 
       // Initial loading
       if (audiobooks.isEmpty && isLoading) {
-        return const Center(
-          child: CircularProgressIndicator(
-            color: AppColors.primaryColor,
+        return Center(
+          child: FlowLoadingIndicator(
+            label: 'Loading ${widget.genre}…',
+            showElapsed: true,
           ),
         );
       }
@@ -177,7 +179,10 @@ class _AudiobookListViewState extends State<_AudiobookListView>
           // Loading indicator at the end
           if (index >= audiobooks.length) {
             return const Center(
-              child: CircularProgressIndicator(),
+              child: FlowLoadingIndicator(
+                compact: true,
+                label: 'Loading more…',
+              ),
             );
           }
 

@@ -2,12 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:audiobookflow/utils/app_events.dart';
-import 'package:audiobookflow/resources/services/local/local_audiobook_service.dart';
-import 'package:audiobookflow/resources/designs/app_colors.dart';
 import 'package:provider/provider.dart';
 import 'package:audiobookflow/resources/designs/theme_notifier.dart';
-import 'package:saf/saf.dart';
-import 'package:audiobookflow/screens/setting/listening_stats_screen.dart';
 import 'package:audiobookflow/screens/four_read_login/four_read_login_screen.dart';
 
 class Settings extends StatefulWidget {
@@ -48,7 +44,6 @@ class _SettingsState extends State<Settings> {
   late final Box _settingsBox;
   List<String> _selected = [];
   List<String> _enabledSources = [];
-  String? _rootFolderPath;
   String _appVersion = '';
 
   static const Map<String, String> _sourceLabels = {
@@ -71,7 +66,6 @@ class _SettingsState extends State<Settings> {
       _settingsBox.get('enabledSearchSources',
           defaultValue: _sourceLabels.keys.toList()),
     );
-    _loadRootFolderPath();
     _loadAppVersion();
   }
 
@@ -80,13 +74,6 @@ class _SettingsState extends State<Settings> {
     final versionString = String.fromCharCodes(info.buffer.asUint8List());
     setState(() {
       _appVersion = versionString;
-    });
-  }
-
-  Future<void> _loadRootFolderPath() async {
-    final path = await LocalAudiobookService.getRootFolderPath();
-    setState(() {
-      _rootFolderPath = path;
     });
   }
 
@@ -163,74 +150,6 @@ class _SettingsState extends State<Settings> {
     );
   }
 
-  Future<void> _selectRootFolder() async {
-    try {
-      await Saf.releasePersistedPermissions();
-
-      // Use SAF to get dynamic directory permission (user chooses folder)
-      bool? isGranted = await Saf.getDynamicDirectoryPermission();
-
-      if (isGranted == true) {
-        // Get the list of persisted permission directories
-        List<String>? persistedDirectories =
-            await Saf.getPersistedPermissionDirectories();
-
-        if (persistedDirectories != null && persistedDirectories.isNotEmpty) {
-          // Use the most recently granted directory
-          String selectedDirectory = persistedDirectories.last;
-
-          await LocalAudiobookService.setRootFolderPath(selectedDirectory);
-
-          // Clear all caches for the new folder
-          await LocalAudiobookService.clearAllCaches();
-
-          setState(() {
-            _rootFolderPath = selectedDirectory;
-          });
-
-          // Notify other screens about the directory change
-          AppEvents.localDirectoryChanged.add(null);
-          if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text('Audiobooks directory updated successfully!'),
-                backgroundColor: AppColors.primaryColor,
-              ),
-            );
-          }
-        } else {
-          if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text('No directory was selected'),
-                backgroundColor: Colors.orange,
-              ),
-            );
-          }
-        }
-      } else {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text(
-                  'Directory access permission denied or selection cancelled'),
-              backgroundColor: Colors.red,
-            ),
-          );
-        }
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error selecting folder: $e'),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
-    }
-  }
-
   Future<void> _editSearchSources() async {
     final temp = {..._enabledSources};
     await showDialog(
@@ -276,6 +195,7 @@ class _SettingsState extends State<Settings> {
                 setState(() {
                   _enabledSources = temp.toList();
                 });
+                AppEvents.searchSourcesChanged.add(null); // broadcast refresh
                 if (ctx.mounted) Navigator.of(ctx).pop();
                 if (mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(
@@ -418,23 +338,6 @@ class _SettingsState extends State<Settings> {
             ),
             trailing: const Icon(Icons.edit),
             onTap: _editSearchSources,
-          ),
-          const Divider(),
-
-          // Local Audiobooks Directory
-          ListTile(
-            leading: const Icon(Icons.folder),
-            title: const Text('Local Books Directory'),
-            subtitle: Text(
-              _rootFolderPath ?? 'No directory selected',
-              style: TextStyle(
-                color: _rootFolderPath != null
-                    ? Theme.of(context).textTheme.bodySmall?.color
-                    : Colors.grey,
-              ),
-            ),
-            trailing: const Icon(Icons.edit),
-            onTap: _selectRootFolder,
           ),
           const Divider(),
 

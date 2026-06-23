@@ -8,9 +8,11 @@ import 'package:audiobookflow/resources/models/audiobook_file.dart';
 import 'package:audiobookflow/resources/services/youtube/youtube_audiobook_notifier.dart';
 import 'package:audiobookflow/resources/services/youtube/webview_keep_alive_provider.dart';
 import 'package:audiobookflow/utils/app_constants.dart';
+import 'package:audiobookflow/widgets/flow_loading_indicator.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 import 'package:go_router/go_router.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 import 'package:provider/provider.dart';
@@ -26,6 +28,7 @@ class YoutubeWebview extends StatefulWidget {
 class _YoutubeWebviewState extends State<YoutubeWebview> {
   String? _currentUrl;
   bool _isImporting = false;
+  String? _importPhase; // Human-readable phase while importing.
   bool _isWebViewLoading = true; // Still defaults to true
   String? _errorMessageYT;
   bool _isCurrentContentImported = false;
@@ -121,6 +124,7 @@ class _YoutubeWebviewState extends State<YoutubeWebview> {
     setState(() {
       _isImporting = true;
       _errorMessageYT = null;
+      _importPhase = null;
     });
 
     try {
@@ -132,6 +136,8 @@ class _YoutubeWebviewState extends State<YoutubeWebview> {
       String entityDescription;
       String? coverImage;
       List<String> tags = [];
+
+      if (mounted) setState(() => _importPhase = 'Fetching metadata…');
 
       if (_currentUrl!.contains('playlist?list=')) {
         final playlist = await yt.playlists.get(_currentUrl!);
@@ -145,11 +151,26 @@ class _YoutubeWebviewState extends State<YoutubeWebview> {
           return;
         }
 
+        if (mounted) setState(() => _importPhase = 'Loading videos…');
+
         // Use HTTP API to fetch playlist videos (yt.playlists.getVideos is broken)
-        final videoDataList = await AudiobookFile.fetchPlaylistVideosViaHttp(entityId);
+        final videoDataList = await AudiobookFile.fetchPlaylistVideosViaHttp(
+          entityId,
+          onProgress: (page, loaded) {
+            if (mounted) {
+              setState(() => _importPhase =
+                  'Loading videos • $loaded found (page $page)');
+            }
+          },
+        );
         if (videoDataList.isEmpty) throw Exception("Playlist contains no videos.");
 
         coverImage = videoDataList.first['thumbnail'];
+
+        if (mounted) {
+          setState(() => _importPhase =
+              'Preparing ${videoDataList.length} tracks…');
+        }
 
         for (var videoData in videoDataList) {
           files.add(AudiobookFile.fromMap({
@@ -188,6 +209,10 @@ class _YoutubeWebviewState extends State<YoutubeWebview> {
         }));
       }
 
+      if (mounted) {
+        setState(() => _importPhase = 'Saving ${files.length} tracks…');
+      }
+
       final audiobook = Audiobook.fromMap({
         "title": entityTitle,
         "id": entityId,
@@ -211,7 +236,12 @@ class _YoutubeWebviewState extends State<YoutubeWebview> {
         setState(() => _errorMessageYT = 'Error importing from YouTube: $e');
       }
     } finally {
-      if (mounted) setState(() => _isImporting = false);
+      if (mounted) {
+        setState(() {
+          _isImporting = false;
+          _importPhase = null;
+        });
+      }
     }
   }
 
@@ -374,17 +404,10 @@ class _YoutubeWebviewState extends State<YoutubeWebview> {
                     if (_isWebViewLoading)
                       Container(
                         color: theme.scaffoldBackgroundColor,
-                        child: const Center(
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              CircularProgressIndicator(),
-                              SizedBox(height: 16),
-                              Text(
-                                'Loading YouTube...',
-                                style: TextStyle(fontSize: 16),
-                              ),
-                            ],
+                        child: Center(
+                          child: FlowLoadingIndicator(
+                            label: 'Loading YouTube…',
+                            showElapsed: true,
                           ),
                         ),
                       ),
@@ -398,22 +421,73 @@ class _YoutubeWebviewState extends State<YoutubeWebview> {
       floatingActionButton: _currentUrl != null &&
               (_currentUrl!.contains('youtube.com/watch') ||
                   _currentUrl!.contains('youtube.com/playlist'))
-          ? FloatingActionButton(
-              heroTag: 'import',
-              backgroundColor: AppColors.primaryColor,
-              onPressed: _isImporting
-                  ? null
-                  : _isCurrentContentImported
-                      ? () => context.go('/home')
-                      : _importFromYouTube,
-              child: _isImporting
-                  ? const CircularProgressIndicator(
-                      strokeWidth: 2,
-                      color: Colors.white,
-                    )
-                  : _isCurrentContentImported
-                      ? const Icon(Icons.check_circle, color: Colors.white)
-                      : const Icon(Icons.add_to_queue, color: Colors.white),
+          ? Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                if (_isImporting && _importPhase != null) ...[
+                  Container(
+                    constraints: const BoxConstraints(maxWidth: 240),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    decoration: BoxDecoration(
+                      color: theme.colorScheme.surface,
+                      borderRadius: BorderRadius.circular(10),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.15),
+                          blurRadius: 8,
+                          offset: const Offset(0, 2),
+                        ),
+                      ],
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const SizedBox(
+                          width: 16,
+                          height: 16,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: AppColors.primaryColor,
+                          ),
+                        ),
+                        const SizedBox(width: 10),
+                        Flexible(
+                          child: Text(
+                            _importPhase!,
+                            style: GoogleFonts.ubuntu(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w500,
+                              color: theme.textTheme.bodyMedium?.color,
+                            ),
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                ],
+                FloatingActionButton(
+                  heroTag: 'import',
+                  backgroundColor: AppColors.primaryColor,
+                  onPressed: _isImporting
+                      ? null
+                      : _isCurrentContentImported
+                          ? () => context.go('/home')
+                          : _importFromYouTube,
+                  child: _isImporting
+                      ? const CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: Colors.white,
+                        )
+                      : _isCurrentContentImported
+                          ? const Icon(Icons.check_circle, color: Colors.white)
+                          : const Icon(Icons.add_to_queue, color: Colors.white),
+                ),
+              ],
             )
           : null,
     );

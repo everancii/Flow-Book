@@ -92,7 +92,6 @@ class SearchBloc extends Bloc<SearchEvent, SearchState> {
       emit(SearchLoading());
     }
 
-    final futures = <Future<_SearchBatchResult>>[];
     final includeLibrivox =
         sourceSelection == SearchSourceSelection.librivox ||
             (sourceSelection == SearchSourceSelection.all &&
@@ -114,38 +113,75 @@ class SearchBloc extends Bloc<SearchEvent, SearchState> {
             (sourceSelection == SearchSourceSelection.all &&
                 _isSourceEnabled('knigavuhe'));
 
+    // Build (source name, future) pairs so each source can report its own
+    // completion and we can emit incremental progress to the UI.
+    final pending = <MapEntry<String, Future<_SearchBatchResult>>>[];
     if (includeLibrivox) {
-      futures.add(_searchLibrivox(query, page));
+      pending.add(MapEntry('LibriVox', _searchLibrivox(query, page)));
     }
     if (includeYoutube) {
-      futures.add(_searchYoutube(query, page));
+      pending.add(MapEntry('YouTube', _searchYoutube(query, page)));
     }
     if (includeArchiveOrg) {
-      futures.add(_searchArchiveOrg(query, page));
+      pending.add(MapEntry('Archive.org', _searchArchiveOrg(query, page)));
     }
     if (includeFourRead) {
-      futures.add(_searchFourRead(query, page));
+      pending.add(MapEntry('4Read', _searchFourRead(query, page)));
     }
     if (includeKnigavuhe) {
-      futures.add(_searchKnigavuhe(query, page));
+      pending.add(MapEntry('Knigavuhe', _searchKnigavuhe(query, page)));
     }
 
-    final results = await Future.wait(futures);
-    var resultIndex = 0;
-    final librivoxResult = includeLibrivox
-        ? results[resultIndex++]
-        : const _SearchBatchResult(books: []);
-    final youtubeResult = includeYoutube
-        ? results[resultIndex++]
-        : const _SearchBatchResult(books: []);
+    final totalSources = pending.length;
+    final resultsByName = <String, _SearchBatchResult>{};
+    final completed = <int, bool>{
+      for (var i = 0; i < pending.length; i++) i: false
+    };
+    var completedCount = 0;
+
+    // Emit an initial (0/N) progress state for fresh searches.
+    if (isFresh && totalSources > 0) {
+      emit(SearchLoading(
+        completedSources: 0,
+        totalSources: totalSources,
+        readySources: const [],
+      ));
+    }
+
+    // Run all sources concurrently but count completions so we can report
+    // real progress as each one resolves (keeping total latency at the max,
+    // not the sum, of the source times).
+    await Future.wait(pending.asMap().entries.map((e) async {
+      final index = e.key;
+      final entry = e.value;
+      final result = await entry.value;
+      resultsByName[entry.key] = result;
+      completed[index] = true;
+      completedCount++;
+      if (isFresh) {
+        final ready = <String>[
+          for (var i = 0; i < pending.length; i++)
+            if (completed[i] == true) pending[i].key,
+        ];
+        emit(SearchLoading(
+          completedSources: completedCount,
+          totalSources: totalSources,
+          readySources: List<String>.unmodifiable(ready),
+        ));
+      }
+    }));
+
+    final librivoxResult =
+        includeLibrivox ? resultsByName['LibriVox']! : const _SearchBatchResult(books: []);
+    final youtubeResult =
+        includeYoutube ? resultsByName['YouTube']! : const _SearchBatchResult(books: []);
     final archiveOrgResult = includeArchiveOrg
-        ? results[resultIndex++]
+        ? resultsByName['Archive.org']!
         : const _SearchBatchResult(books: []);
-    final fourReadResult = includeFourRead
-        ? results[resultIndex++]
-        : const _SearchBatchResult(books: []);
+    final fourReadResult =
+        includeFourRead ? resultsByName['4Read']! : const _SearchBatchResult(books: []);
     final knigavuheResult = includeKnigavuhe
-        ? results[resultIndex++]
+        ? resultsByName['Knigavuhe']!
         : const _SearchBatchResult(books: []);
     final librivoxBooks = librivoxResult.books;
     final youtubeBooks = youtubeResult.books;

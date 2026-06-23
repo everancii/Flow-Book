@@ -4,7 +4,6 @@ import 'dart:io';
 import 'package:audio_service/audio_service.dart';
 import 'package:flutter/material.dart';
 import 'package:hive/hive.dart';
-import 'package:audiobookflow/resources/designs/app_colors.dart';
 import 'package:audiobookflow/resources/models/audiobook.dart';
 import 'package:audiobookflow/resources/models/audiobook_file.dart';
 import 'package:audiobookflow/resources/services/audio_handler_provider.dart';
@@ -251,14 +250,37 @@ class _MiniAudioPlayerState extends State<MiniAudioPlayer> {
                                           size: 24,
                                         ),
                                         showLoading
-                                            ? const SizedBox(
+                                            ? SizedBox(
                                                 width: 48,
                                                 height: 48,
                                                 child: Padding(
-                                                  padding: EdgeInsets.all(12.0),
-                                                  child: CircularProgressIndicator(
-                                                    strokeWidth: 2.0,
-                                                    color: Colors.white,
+                                                  padding: const EdgeInsets.all(10.0),
+                                                  child: AnimatedBuilder(
+                                                    animation: handler.bufferingProgress,
+                                                    builder: (context, _) {
+                                                      final p =
+                                                          handler.bufferingProgress.value;
+                                                      return Stack(
+                                                        alignment: Alignment.center,
+                                                        children: [
+                                                          CircularProgressIndicator(
+                                                            value: p > 0 ? p : null,
+                                                            strokeWidth: 2.0,
+                                                            color: Colors.white,
+                                                            backgroundColor: Colors.white
+                                                                .withValues(alpha: 0.2),
+                                                          ),
+                                                          Text(
+                                                            p > 0 ? '${(p * 100).toInt()}%' : '',
+                                                            style: const TextStyle(
+                                                              fontSize: 8,
+                                                              fontWeight: FontWeight.w700,
+                                                              color: Colors.white,
+                                                            ),
+                                                          ),
+                                                        ],
+                                                      );
+                                                    },
                                                   ),
                                                 ),
                                               )

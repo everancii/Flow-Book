@@ -5,7 +5,34 @@ sealed class SearchState {}
 
 final class SearchInitial extends SearchState {}
 
-class SearchLoading extends SearchState {}
+class SearchLoading extends SearchState {
+  /// How many of the requested sources have finished so far.
+  final int completedSources;
+
+  /// Total number of sources being queried in parallel.
+  final int totalSources;
+
+  /// Human-readable names of the sources that have already resolved.
+  final List<String> readySources;
+
+  SearchLoading({
+    this.completedSources = 0,
+    this.totalSources = 0,
+    this.readySources = const [],
+  });
+
+  SearchLoading copyWith({
+    int? completedSources,
+    int? totalSources,
+    List<String>? readySources,
+  }) {
+    return SearchLoading(
+      completedSources: completedSources ?? this.completedSources,
+      totalSources: totalSources ?? this.totalSources,
+      readySources: readySources ?? this.readySources,
+    );
+  }
+}
 
 class SearchSuccess extends SearchState {
   final List<Audiobook> librivoxAudiobooks;
