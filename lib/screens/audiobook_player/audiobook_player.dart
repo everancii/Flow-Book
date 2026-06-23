@@ -543,58 +543,41 @@ class _AudiobookPlayerState extends State<AudiobookPlayer> {
                   }
                   return false;
                 },
-                child: SingleChildScrollView(
-                padding: EdgeInsets.fromLTRB(
-                  20,
-                  0,
-                  20,
-                  20 + MediaQuery.viewInsetsOf(context).bottom,
-                ),
-                keyboardDismissBehavior:
-                    ScrollViewKeyboardDismissBehavior.onDrag,
                 child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.center,
-                  mainAxisSize: MainAxisSize.min,
                   children: [
-                    const SizedBox(height: 30),
+                    const SizedBox(height: 16),
 
-                    // Modern cover art with glassmorphism effect
-                    Hero(
-                      tag: 'audiobook_cover',
-                      child: Container(
-                        decoration: BoxDecoration(
-                          borderRadius: BorderRadius.circular(24),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Theme.of(context).brightness ==
-                                      Brightness.dark
-                                  ? Colors.black.withValues(alpha: 0.6)
-                                  : Colors.black.withValues(alpha: 0.15),
-                              spreadRadius: 0,
-                              blurRadius: 30,
-                              offset: const Offset(0, 15),
+                    // Cover art
+                    Expanded(
+                      flex: 4,
+                      child: Center(
+                        child: Hero(
+                          tag: 'audiobook_cover',
+                          child: Container(
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(24),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Theme.of(context).brightness ==
+                                          Brightness.dark
+                                      ? Colors.black.withValues(alpha: 0.6)
+                                      : Colors.black.withValues(alpha: 0.15),
+                                  spreadRadius: 0,
+                                  blurRadius: 30,
+                                  offset: const Offset(0, 15),
+                                ),
+                              ],
                             ),
-                            BoxShadow(
-                              color: Theme.of(context).brightness ==
-                                      Brightness.dark
-                                  ? Colors.black.withValues(alpha: 0.3)
-                                  : Colors.black.withValues(alpha: 0.08),
-                              spreadRadius: 0,
-                              blurRadius: 60,
-                              offset: const Offset(0, 30),
+                            child: ClipRRect(
+                              borderRadius: BorderRadius.circular(24),
+                              child: _artLarge(mediaItem.artUri, size: 220),
                             ),
-                          ],
-                        ),
-                        child: ClipRRect(
-                          borderRadius: BorderRadius.circular(24),
-                          child: _artLarge(mediaItem.artUri, size: 280),
+                          ),
                         ),
                       ),
                     ),
 
-                    const SizedBox(height: 32),
-
-                    // Modern title section with better typography
+                    // Title section
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 16),
                       child: Column(
@@ -602,7 +585,7 @@ class _AudiobookPlayerState extends State<AudiobookPlayer> {
                           Text(
                             contentTitle,
                             style: TextStyle(
-                              fontSize: 24,
+                              fontSize: 22,
                               fontWeight: FontWeight.w700,
                               color: Theme.of(context).brightness ==
                                       Brightness.dark
@@ -615,39 +598,37 @@ class _AudiobookPlayerState extends State<AudiobookPlayer> {
                             overflow: TextOverflow.ellipsis,
                           ),
                           if (!isSingleTrack) ...[
-                            const SizedBox(height: 8),
+                            const SizedBox(height: 4),
                             Text(
                               mediaItem.album ?? 'Unknown',
                               style: TextStyle(
-                                fontSize: 16,
+                                fontSize: 15,
                                 fontWeight: FontWeight.w500,
                                 color: Theme.of(context).brightness ==
                                         Brightness.dark
                                     ? AppColors.listTileSubtitleColor
                                     : AppColors.subtitleTextColorLight,
-                                height: 1.3,
                               ),
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                             ),
                           ],
-                          const SizedBox(height: 6),
+                          const SizedBox(height: 4),
                           Text(
                             mediaItem.artist ?? 'Unknown',
                             style: TextStyle(
-                              fontSize: 14,
+                              fontSize: 13,
                               fontWeight: FontWeight.w400,
                               color: Theme.of(context).brightness ==
                                       Brightness.dark
                                   ? AppColors.listTileSubtitleColor
                                       .withValues(alpha: 0.8)
                                   : AppColors.subtitleTextColorLight,
-                              height: 1.4,
                             ),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                           ),
-                          const SizedBox(height: 4),
+                          const SizedBox(height: 2),
                           Container(
                             padding: const EdgeInsets.symmetric(
                                 horizontal: 8, vertical: 2),
@@ -657,7 +638,7 @@ class _AudiobookPlayerState extends State<AudiobookPlayer> {
                             ),
                             child: Text(
                               (audiobook.origin ?? 'Unknown').toUpperCase(),
-                              style: TextStyle(
+                              style: const TextStyle(
                                 fontSize: 10,
                                 fontWeight: FontWeight.bold,
                                 color: Colors.deepOrange,
@@ -668,100 +649,78 @@ class _AudiobookPlayerState extends State<AudiobookPlayer> {
                       ),
                     ),
 
-                    const SizedBox(height: 40),
-
-                    // Modern progress bar container
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8),
+                    // Progress bar
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(24, 12, 24, 0),
                       child: ProgressBarWidget(
                         audioHandler: audioHandlerProvider.audioHandler,
                       ),
                     ),
 
-                    const SizedBox(height: 40),
-                    // Modern controls container with glassmorphism
-                    Container(
-                      margin: const EdgeInsets.symmetric(horizontal: 8),
-                      padding: const EdgeInsets.all(24),
-                      decoration: BoxDecoration(
-                        color: Theme.of(context).brightness == Brightness.dark
-                            ? Colors.white.withValues(alpha: 0.08)
-                            : Colors.white.withValues(alpha: 0.6),
-                        borderRadius: BorderRadius.circular(20),
-                        border: Border.all(
+                    // Controls
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
+                      child: Container(
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
                           color: Theme.of(context).brightness == Brightness.dark
-                              ? Colors.white.withValues(alpha: 0.15)
-                              : Colors.white.withValues(alpha: 0.4),
-                          width: 1.5,
+                              ? Colors.white.withValues(alpha: 0.08)
+                              : Colors.white.withValues(alpha: 0.6),
+                          borderRadius: BorderRadius.circular(20),
+                          border: Border.all(
+                            color: Theme.of(context).brightness == Brightness.dark
+                                ? Colors.white.withValues(alpha: 0.15)
+                                : Colors.white.withValues(alpha: 0.4),
+                            width: 1.5,
+                          ),
                         ),
-                        boxShadow: [
-                          BoxShadow(
-                            color:
-                                Theme.of(context).brightness == Brightness.dark
-                                    ? Colors.black.withValues(alpha: 0.4)
-                                    : Colors.black.withValues(alpha: 0.1),
-                            spreadRadius: 0,
-                            blurRadius: 25,
-                            offset: const Offset(0, 10),
-                          ),
-                          BoxShadow(
-                            color:
-                                Theme.of(context).brightness == Brightness.dark
-                                    ? Colors.black.withValues(alpha: 0.2)
-                                    : Colors.black.withValues(alpha: 0.05),
-                            spreadRadius: 0,
-                            blurRadius: 40,
-                            offset: const Offset(0, 20),
-                          ),
-                        ],
-                      ),
-                      child: ValueListenableBuilder<bool>(
-                        valueListenable: audioHandlerProvider.audioHandler.sleepTimer.isActive,
-                        builder: (context, isTimerActive, child) {
-                          return ValueListenableBuilder<Duration?>(
-                            valueListenable: audioHandlerProvider.audioHandler.sleepTimer.remainingTime,
-                            builder: (context, activeTimerDuration, child) {
-                              return ValueListenableBuilder<bool>(
-                                valueListenable: _skipSilenceNotifier,
-                                builder: (context, skipSilence, child) {
-                                  return Controls(
-                                    audioHandler:
-                                        audioHandlerProvider.audioHandler,
-                                    onTimerPressed: showTimerOptions,
-                                    isTimerActive: isTimerActive,
-                                    activeTimerDuration: activeTimerDuration,
-                                    onCancelTimer: cancelTimer,
-                                    onToggleSkipSilence: () {
-                                      final newValue =
-                                          !_skipSilenceNotifier.value;
-                                      _skipSilenceNotifier.value = newValue;
-                                      audioHandlerProvider.audioHandler
-                                          .setSkipSilence(newValue);
-                                      ScaffoldMessenger.of(context)
-                                          .showSnackBar(
-                                        SnackBar(
-                                          duration: const Duration(seconds: 1),
-                                          content: Text(
-                                            newValue
-                                                ? 'Skip Silence Enabled'
-                                                : 'Skip Silence Disabled',
+                        child: ValueListenableBuilder<bool>(
+                          valueListenable: audioHandlerProvider.audioHandler.sleepTimer.isActive,
+                          builder: (context, isTimerActive, child) {
+                            return ValueListenableBuilder<Duration?>(
+                              valueListenable: audioHandlerProvider.audioHandler.sleepTimer.remainingTime,
+                              builder: (context, activeTimerDuration, child) {
+                                return ValueListenableBuilder<bool>(
+                                  valueListenable: _skipSilenceNotifier,
+                                  builder: (context, skipSilence, child) {
+                                    return Controls(
+                                      audioHandler:
+                                          audioHandlerProvider.audioHandler,
+                                      onTimerPressed: showTimerOptions,
+                                      isTimerActive: isTimerActive,
+                                      activeTimerDuration: activeTimerDuration,
+                                      onCancelTimer: cancelTimer,
+                                      onToggleSkipSilence: () {
+                                        final newValue =
+                                            !_skipSilenceNotifier.value;
+                                        _skipSilenceNotifier.value = newValue;
+                                        audioHandlerProvider.audioHandler
+                                            .setSkipSilence(newValue);
+                                        ScaffoldMessenger.of(context)
+                                            .showSnackBar(
+                                          SnackBar(
+                                            duration: const Duration(seconds: 1),
+                                            content: Text(
+                                              newValue
+                                                  ? 'Skip Silence Enabled'
+                                                  : 'Skip Silence Disabled',
+                                            ),
                                           ),
-                                        ),
-                                      );
-                                    },
-                                    skipSilence: skipSilence,
-                                  );
-                                },
-                              );
-                            },
-                          );
-                        },
+                                        );
+                                      },
+                                      skipSilence: skipSilence,
+                                    );
+                                  },
+                                );
+                              },
+                            );
+                          },
+                        ),
                       ),
                     ),
                   ],
                 ),
               ),
-            ),
             ),
           ),
         );

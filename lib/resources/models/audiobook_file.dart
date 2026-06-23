@@ -4,6 +4,7 @@ import 'dart:io';
 import 'package:audiobookflow/utils/app_logger.dart';
 import 'package:audiobookflow/resources/services/four_read/four_read_storage.dart';
 import 'package:audiobookflow/resources/services/four_read/four_read_page_service.dart';
+import 'package:audiobookflow/resources/services/four_read/four_read_auth_service.dart';
 import 'package:flutter_media_metadata/flutter_media_metadata.dart';
 import 'package:fpdart/fpdart.dart';
 import 'package:http/http.dart' as http;
@@ -663,15 +664,11 @@ class AudiobookFile {
   static Future<Map<String, dynamic>> _fetchFourReadVars(
     String articleUrl,
   ) async {
+    final authService = FourReadAuthService();
+    final authHeaders = await authService.getAuthHeaders();
     final html = await FourReadPageService.safeHttpGetBody(
       articleUrl,
-      {
-        'User-Agent':
-            'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
-        'Accept':
-            'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-        'Referer': 'https://4read.org',
-      },
+      authHeaders,
     );
     final vars = <String, dynamic>{};
     final match = RegExp(
@@ -685,14 +682,12 @@ class AudiobookFile {
   }
 
   static Future<String> _fetchFourReadPlaylist(String playlistUrl) async {
+    final authService = FourReadAuthService();
+    final authHeaders = await authService.getAuthHeaders();
+    authHeaders['Accept'] = '*/*';
     return FourReadPageService.safeHttpGetBody(
       playlistUrl,
-      {
-        'User-Agent':
-            'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
-        'Accept': '*/*',
-        'Referer': 'https://4read.org',
-      },
+      authHeaders,
     );
   }
 

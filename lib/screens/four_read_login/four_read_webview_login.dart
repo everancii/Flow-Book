@@ -40,9 +40,17 @@ class _FourReadWebViewLoginState extends State<FourReadWebViewLogin> {
             initialSettings: InAppWebViewSettings(
               useOnLoadResource: true,
               javaScriptEnabled: true,
+              useShouldOverrideUrlLoading: true,
             ),
             onWebViewCreated: (controller) {
               _webViewController = controller;
+            },
+            shouldOverrideUrlLoading: (controller, navigationAction) async {
+              final url = navigationAction.request.url.toString();
+              if (url.startsWith('intent://') || url.startsWith('market://')) {
+                return NavigationActionPolicy.CANCEL;
+              }
+              return NavigationActionPolicy.ALLOW;
             },
             onLoadStart: (controller, url) {
               AppLogger.debug('[FourReadWebView] Loading: $url', 'FourReadWebView');
