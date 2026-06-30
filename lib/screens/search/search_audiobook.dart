@@ -40,16 +40,22 @@ class _SearchAudiobookState extends State<SearchAudiobook> {
     _scrollController.addListener(() {
       if (!_scrollController.hasClients || isLoadingMore) return;
 
-      final atBottom = _scrollController.position.pixels >=
-          _scrollController.position.maxScrollExtent - 24;
-      final state = searchBloc.state;
-      if (atBottom &&
-          state is SearchSuccess &&
-          state.hasMoreResults &&
-          (state.audiobooks.isNotEmpty)) {
-        setState(() => isLoadingMore = true);
-        searchBloc.add(EventLoadMoreResults());
-      }
+          final atBottom = _scrollController.position.pixels >=
+              _scrollController.position.maxScrollExtent - 24;
+          final state = searchBloc.state;
+          if (atBottom &&
+              state is SearchSuccess &&
+              state.hasMoreResults &&
+              (state.audiobooks.isNotEmpty)) {
+            setState(() => isLoadingMore = true);
+            searchBloc.add(EventLoadMoreResults());
+          }
+        });
+
+    // Rebuild whenever the query changes so the clear (✕) button can
+    // show/hide based on whether the field has text.
+    _searchController.addListener(() {
+      if (mounted) setState(() {});
     });
 
     // Rebuild the source chips when the user changes enabled sources in
@@ -172,6 +178,30 @@ class _SearchAudiobookState extends State<SearchAudiobook> {
                               fontSize: 14,
                             ),
                             border: InputBorder.none,
+                            isDense: true,
+                            suffixIcon: _searchController.text.isNotEmpty
+                                ? IconButton(
+                                    icon: Icon(
+                                      Icons.cancel,
+                                      color: isDark
+                                          ? Colors.grey.shade400
+                                          : Colors.grey.shade500,
+                                      size: 28,
+                                    ),
+                                    padding: EdgeInsets.zero,
+                                    constraints: const BoxConstraints(
+                                      minWidth: 40,
+                                      minHeight: 40,
+                                    ),
+                                    tooltip: 'Clear',
+                                    onPressed: () {
+                                      _searchController.clear();
+                                      FocusScope.of(context).requestFocus(
+                                        FocusNode(),
+                                      );
+                                    },
+                                  )
+                                : null,
                           ),
                           onSubmitted: (_) => _doSearch(),
                         ),
