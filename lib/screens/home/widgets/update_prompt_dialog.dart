@@ -77,13 +77,29 @@ class UpdatePromptDialog extends StatelessWidget {
             const SizedBox(height: 8),
 
             // Version Info
-            Text(
-              'Version $newVersion',
-              style: GoogleFonts.ubuntu(
-                fontSize: 16,
-                color: AppColors.primaryColor,
-                fontWeight: FontWeight.w500,
-              ),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Text(
+                  currentVersion,
+                  style: GoogleFonts.ubuntu(
+                    fontSize: 14,
+                    color: Colors.grey,
+                  ),
+                ),
+                const Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 8),
+                  child: Icon(Icons.arrow_forward, size: 16, color: AppColors.primaryColor),
+                ),
+                Text(
+                  newVersion,
+                  style: GoogleFonts.ubuntu(
+                    fontSize: 16,
+                    color: AppColors.primaryColor,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
             ),
             const SizedBox(height: 16),
 

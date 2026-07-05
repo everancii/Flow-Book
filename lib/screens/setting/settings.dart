@@ -4,7 +4,11 @@ import 'package:hive_flutter/hive_flutter.dart';
 import 'package:audiobookflow/utils/app_events.dart';
 import 'package:provider/provider.dart';
 import 'package:audiobookflow/resources/designs/theme_notifier.dart';
+import 'package:audiobookflow/resources/latest_version_fetch.dart';
+import 'package:audiobookflow/resources/models/latest_version_fetch_model.dart';
 import 'package:audiobookflow/screens/four_read_login/four_read_login_screen.dart';
+import 'package:audiobookflow/utils/version_compare.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class Settings extends StatefulWidget {
   const Settings({super.key});
@@ -45,6 +49,8 @@ class _SettingsState extends State<Settings> {
   List<String> _selected = [];
   List<String> _enabledSources = [];
   String _appVersion = '';
+  LatestVersionFetchModel? _updateInfo;
+  bool _checkingUpdate = false;
 
   static const Map<String, String> _sourceLabels = {
     'librivox': 'LibriVox',
@@ -67,6 +73,7 @@ class _SettingsState extends State<Settings> {
           defaultValue: _sourceLabels.keys.toList()),
     );
     _loadAppVersion();
+    _checkForUpdate();
   }
 
   Future<void> _loadAppVersion() async {
@@ -75,6 +82,27 @@ class _SettingsState extends State<Settings> {
     setState(() {
       _appVersion = versionString;
     });
+  }
+
+  Future<void> _checkForUpdate() async {
+    if (_appVersion.isEmpty) return;
+    setState(() => _checkingUpdate = true);
+    final result = await LatestVersionFetch().getLatestVersion();
+    result.fold(
+      (_) {},
+      (model) {
+        if (model.latestVersion != null &&
+            compareVersions(model.latestVersion!, _appVersion) > 0) {
+          setState(() {
+            _updateInfo = model;
+            _checkingUpdate = false;
+          });
+        } else {
+          setState(() => _checkingUpdate = false);
+        }
+      },
+    );
+    if (_checkingUpdate) setState(() => _checkingUpdate = false);
   }
 
   Future<void> _editLanguages() async {
@@ -358,11 +386,67 @@ class _SettingsState extends State<Settings> {
           ),
           const Divider(),
 
+          // Update available indicator
+          if (_updateInfo != null) ...[
+            ListTile(
+              leading: Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: Colors.orange.shade50,
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(
+                  Icons.system_update_rounded,
+                  color: Colors.orange.shade700,
+                  size: 22,
+                ),
+              ),
+              title: Text(
+                'Update Available',
+                style: TextStyle(
+                  fontWeight: FontWeight.w600,
+                  color: Colors.orange.shade800,
+                ),
+              ),
+              subtitle: Text(
+                'Version ${_updateInfo!.latestVersion}',
+                style: TextStyle(color: Colors.orange.shade600),
+              ),
+              trailing: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                decoration: BoxDecoration(
+                  color: Colors.orange.shade100,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Text(
+                  'NEW',
+                  style: TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w700,
+                    color: Colors.orange.shade800,
+                  ),
+                ),
+              ),
+              onTap: () => launchUrl(
+                Uri.parse('https://github.com/everancii/Flow-Book/releases/latest'),
+                mode: LaunchMode.externalApplication,
+              ),
+            ),
+            const Divider(),
+          ],
+
           // Version
           ListTile(
             leading: const Icon(Icons.info_outline),
             title: const Text('Version'),
             subtitle: Text(_appVersion.isNotEmpty ? _appVersion : '1.1.1'),
+            trailing: _checkingUpdate
+                ? const SizedBox(
+                    width: 16,
+                    height: 16,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                : null,
           ),
         ],
       ),

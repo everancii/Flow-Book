@@ -11,6 +11,7 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../../resources/latest_version_fetch.dart';
 import '../../resources/models/latest_version_fetch_model.dart';
+import '../../utils/version_compare.dart';
 import 'widgets/history_section.dart';
 import 'widgets/update_prompt_dialog.dart';
 import 'widgets/app_bar_actions.dart';
@@ -54,7 +55,7 @@ class _HomeState extends State<Home> {
       (error) => AppLogger.debug(error),
       (latestVersionModel) async {
         if (latestVersionModel.latestVersion != null &&
-            latestVersionModel.latestVersion!.compareTo(currentVersion) > 0) {
+            compareVersions(latestVersionModel.latestVersion!, currentVersion) > 0) {
           _showUpdatePrompt(latestVersionModel);
         }
       },
