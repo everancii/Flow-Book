@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:io';
 import 'package:device_info_plus/device_info_plus.dart';
+import 'package:audiobookflow/resources/services/update_data_backup_service.dart';
 import 'package:flutter/services.dart';
 import 'package:fpdart/fpdart.dart';
 import 'package:path_provider/path_provider.dart';
@@ -87,6 +88,7 @@ class LatestVersionFetch {
       throw StateError('Could not download the update APK.');
     }
 
+    await UpdateDataBackupService.createPreUpdateBackup();
     await installUpdate(version);
   }
 

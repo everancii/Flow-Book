@@ -40,6 +40,8 @@ For local testing, use the update helper script. It builds one APK and installs 
 
 If Android reports `INSTALL_FAILED_UPDATE_INCOMPATIBLE`, the phone has a Flow Book build signed with a different key. Uninstall `com.everancii.audiobookflow` once, then run the script again.
 
+Normal Android updates preserve local Flow Book data, including history, recently played position, favorites, bookmarks, downloads, and settings. Uninstalling the app removes that local data.
+
 ## AI Disclosure
 
 - **Assistance Level:** Substantial – Used throughout development

@@ -62,7 +62,8 @@ fi
 if [[ "$INSTALL_OUTPUT" == *"INSTALL_FAILED_UPDATE_INCOMPATIBLE"* ]]; then
   echo
   echo "The installed app was signed with a different key."
-  echo "Run this to clean-install and lose local app data:"
+  echo "Do not uninstall if you need to preserve history, recently played, downloads, bookmarks, or settings."
+  echo "Only run this clean-install command when losing local app data is acceptable:"
   echo "$ADB -s $DEVICE uninstall $APP_ID"
   echo "$ADB -s $DEVICE install $APK"
 fi

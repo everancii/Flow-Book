@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:audiobookflow/resources/designs/theme_notifier.dart';
 import 'package:audiobookflow/resources/designs/themes.dart';
 import 'package:audiobookflow/resources/services/download/download_manager.dart';
+import 'package:audiobookflow/resources/services/update_data_backup_service.dart';
 import 'package:audiobookflow/resources/services/youtube/youtube_audiobook_notifier.dart';
 import 'package:audiobookflow/resources/services/youtube/webview_keep_alive_provider.dart';
 import 'package:audiobookflow/screens/recommendation/recommendation_screen.dart';
@@ -92,6 +93,8 @@ Future<void> initHive() async {
 
   isRecommendScreen = 0;
 
+  await UpdateDataBackupService.restoreMissingDataAfterUpdate();
+
   DownloadManager().cleanStaleStatuses();
 }
 
@@ -112,7 +115,8 @@ class _MyAppState extends State<MyApp> {
   GoRouter _buildRouter() {
     return GoRouter(
       navigatorKey: _rootNavigatorKey,
-      initialLocation: isRecommendScreen == 1 ? '/recommendation_screen' : '/home',
+      initialLocation:
+          isRecommendScreen == 1 ? '/recommendation_screen' : '/home',
       routes: [
         GoRoute(
           path: '/recommendation_screen',
