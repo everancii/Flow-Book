@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'package:audiobookflow/resources/models/audiobook_file.dart';
+import 'package:audiobookflow/resources/services/knigavuhe/knigavuhe_http.dart';
 import 'package:fpdart/fpdart.dart';
 import 'package:http/http.dart' as http;
 
@@ -19,15 +20,12 @@ class KnigavuheDetailService {
       try {
         final response = await client.get(
           Uri.parse(bookUrl),
-          headers: const {
-            'User-Agent':
-                'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
-            'Accept':
-                'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-            'Accept-Language': 'ru-RU,ru;q=0.9,en;q=0.8',
-            'Referer': 'https://knigavuhe.org/',
-          },
+          headers: KnigavuheHttp.headers,
         );
+
+        if (KnigavuheHttp.isBlocked(response)) {
+          return const Left(KnigavuheBlockedException.message);
+        }
 
         if (response.statusCode != 200) {
           return Left('Failed to load knigavuhe page: ${response.statusCode}');
@@ -76,8 +74,7 @@ class KnigavuheDetailService {
     }
 
     // Extract the BookPlayer constructor call which contains the tracks JSON
-    final match = RegExp(r'new BookPlayer\(\d+,\s*(\[.*?\])\s*,',
-            dotAll: true)
+    final match = RegExp(r'new BookPlayer\(\d+,\s*(\[.*?\])\s*,', dotAll: true)
         .firstMatch(html);
 
     if (match == null) {
@@ -132,7 +129,8 @@ class KnigavuheDetailService {
         return Left('No audio tracks found');
       }
 
-      return Right(KnigavuheDetailResult(files: files, description: description));
+      return Right(
+          KnigavuheDetailResult(files: files, description: description));
     } catch (e) {
       return Left('Failed to parse knigavuhe tracks: $e');
     }

@@ -1,15 +1,10 @@
 import 'package:audiobookflow/resources/models/audiobook.dart';
+import 'package:audiobookflow/resources/services/knigavuhe/knigavuhe_http.dart';
 import 'package:audiobookflow/utils/app_constants.dart';
 import 'package:http/http.dart' as http;
 
 class KnigavuheListService {
-  static const _baseUrl = 'https://knigavuhe.org';
-  static const _headers = {
-    'User-Agent':
-        'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
-    'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-    'Referer': _baseUrl,
-  };
+  static const _baseUrl = KnigavuheHttp.baseUrl;
 
   Future<List<Audiobook>> fetchNewBooks() => _fetchList('$_baseUrl/new/');
   Future<List<Audiobook>> fetchPopularBooks({String period = 'alltime'}) =>
@@ -19,11 +14,19 @@ class KnigavuheListService {
 
   Future<List<Audiobook>> _fetchList(String url) async {
     try {
-      final response = await http.get(Uri.parse(url), headers: _headers);
+      final response = await http.get(
+        Uri.parse(url),
+        headers: KnigavuheHttp.headers,
+      );
+      if (KnigavuheHttp.isBlocked(response)) {
+        throw const KnigavuheBlockedException();
+      }
       if (response.statusCode != 200) {
         throw Exception('Failed to load: ${response.statusCode}');
       }
       return _parseBooks(response.body);
+    } on KnigavuheBlockedException catch (e) {
+      throw Exception(e.toString());
     } catch (e) {
       throw Exception('Failed to load knigavuhe list: $e');
     }
@@ -40,14 +43,23 @@ class KnigavuheListService {
           rawCard,
           RegExp(r'<a[^>]*href="([^"]+)"[^>]*>',
               dotAll: true, caseSensitive: false));
-      final title = _cleanText(
-          _match(rawCard, RegExp(r'<a[^>]*class="bookkitem_name"[^>]*>(.*?)</a>', dotAll: true)));
-      final author = _cleanText(
-          _match(rawCard, RegExp(r'<span[^>]*class="bookkitem_author"[^>]*>.*?<a[^>]*>(.*?)</a>', dotAll: true)));
+      final title = _cleanText(_match(
+          rawCard,
+          RegExp(r'<a[^>]*class="bookkitem_name"[^>]*>(.*?)</a>',
+              dotAll: true)));
+      final author = _cleanText(_match(
+          rawCard,
+          RegExp(
+              r'<span[^>]*class="bookkitem_author"[^>]*>.*?<a[^>]*>(.*?)</a>',
+              dotAll: true)));
       final imagePath = _match(
-          rawCard, RegExp(r'<img[^>]*class="bookkitem_cover_img"[^>]*src="([^"]+)"', dotAll: true));
-      final description = _cleanText(
-          _match(rawCard, RegExp(r'<div[^>]*class="bookkitem_about"[^>]*>(.*?)</div>', dotAll: true)));
+          rawCard,
+          RegExp(r'<img[^>]*class="bookkitem_cover_img"[^>]*src="([^"]+)"',
+              dotAll: true));
+      final description = _cleanText(_match(
+          rawCard,
+          RegExp(r'<div[^>]*class="bookkitem_about"[^>]*>(.*?)</div>',
+              dotAll: true)));
 
       if (href.isEmpty || title.isEmpty) continue;
 
