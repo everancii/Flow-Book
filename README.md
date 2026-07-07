@@ -30,6 +30,16 @@ This app enables `android:usesCleartextTraffic` because it streams content from 
    flutter build apk --release --split-per-abi
    ```
 
+### Updating a Connected Android Phone
+
+For local testing, use the update helper script. It builds one APK and installs it with Android replace mode, so normal updates do not fail with "app already installed". For debug builds it also allows version downgrades, which is useful when switching between local builds.
+
+```bash
+./scripts/update-android-device.sh 192.168.1.131:44749
+```
+
+If Android reports `INSTALL_FAILED_UPDATE_INCOMPATIBLE`, the phone has a Flow Book build signed with a different key. Uninstall `com.everancii.audiobookflow` once, then run the script again.
+
 ## AI Disclosure
 
 - **Assistance Level:** Substantial – Used throughout development
