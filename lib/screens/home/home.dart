@@ -7,7 +7,6 @@ import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
-import 'package:url_launcher/url_launcher.dart';
 
 import '../../resources/latest_version_fetch.dart';
 import '../../resources/models/latest_version_fetch_model.dart';
@@ -55,7 +54,8 @@ class _HomeState extends State<Home> {
       (error) => AppLogger.debug(error),
       (latestVersionModel) async {
         if (latestVersionModel.latestVersion != null &&
-            compareVersions(latestVersionModel.latestVersion!, currentVersion) > 0) {
+            compareVersions(latestVersionModel.latestVersion!, currentVersion) >
+                0) {
           _showUpdatePrompt(latestVersionModel);
         }
       },
@@ -69,15 +69,43 @@ class _HomeState extends State<Home> {
         currentVersion: currentVersion,
         newVersion: versionModel.latestVersion!,
         changelogs: versionModel.changelogs,
-        onUpdate: () {
+        onUpdate: () async {
           Navigator.of(context).pop();
-          launchUrl(
-            Uri.parse('https://github.com/everancii/Flow-Book/releases/latest'),
-            mode: LaunchMode.externalApplication,
-          );
+          await _downloadAndInstallUpdate(versionModel);
         },
       ),
     );
+  }
+
+  Future<void> _downloadAndInstallUpdate(
+    LatestVersionFetchModel versionModel,
+  ) async {
+    if (!mounted) return;
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Downloading update...')),
+    );
+
+    try {
+      await _latestVersionFetch.downloadAndInstallUpdate(versionModel);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Opening Android installer...')),
+      );
+    } on PlatformException catch (e) {
+      if (!mounted) return;
+      final message = e.code == 'INSTALL_PERMISSION_REQUIRED'
+          ? 'Allow Flow Book to install updates, then tap Update again.'
+          : e.message ?? 'Could not install the update.';
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(message)),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(e.toString())),
+      );
+    }
   }
 
   @override

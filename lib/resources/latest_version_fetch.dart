@@ -1,13 +1,15 @@
 import 'dart:convert';
 import 'dart:io';
+import 'package:device_info_plus/device_info_plus.dart';
+import 'package:flutter/services.dart';
 import 'package:fpdart/fpdart.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:http/http.dart' as http;
-import 'package:open_file/open_file.dart';
 import 'models/latest_version_fetch_model.dart';
 import '../utils/app_logger.dart';
 
 class LatestVersionFetch {
+  static const _updateChannel = MethodChannel('app_update_channel');
   static const _apiUrl =
       'https://api.github.com/repos/everancii/Flow-Book/releases/latest';
 
@@ -59,13 +61,41 @@ class LatestVersionFetch {
     try {
       final apkPath = await getApkPath(version);
       if (apkPath != null) {
-        final result = await OpenFile.open(apkPath);
-        if (result.type != ResultType.done) {
-          AppLogger.error('OpenFile error: ${result.message}', 'LatestVersionFetch');
-        }
+        await _updateChannel.invokeMethod('installApk', {'apkPath': apkPath});
       }
     } catch (e) {
       AppLogger.error('Installation error: $e', 'LatestVersionFetch');
+      rethrow;
     }
+  }
+
+  Future<void> downloadAndInstallUpdate(
+    LatestVersionFetchModel updateInfo,
+  ) async {
+    final version = updateInfo.latestVersion;
+    if (version == null || version.isEmpty) {
+      throw StateError('Update version is missing.');
+    }
+
+    final downloadUrl = await _downloadUrlForDevice(updateInfo);
+    if (downloadUrl == null || downloadUrl.isEmpty) {
+      throw StateError('No compatible APK was found for this device.');
+    }
+
+    final downloaded = await downloadUpdate(downloadUrl, version);
+    if (!downloaded) {
+      throw StateError('Could not download the update APK.');
+    }
+
+    await installUpdate(version);
+  }
+
+  Future<String?> _downloadUrlForDevice(
+    LatestVersionFetchModel updateInfo,
+  ) async {
+    if (!Platform.isAndroid) return updateInfo.apkDownloadUrl;
+
+    final androidInfo = await DeviceInfoPlugin().androidInfo;
+    return updateInfo.apkDownloadUrlForAbis(androidInfo.supportedAbis);
   }
 }

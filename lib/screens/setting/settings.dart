@@ -8,7 +8,6 @@ import 'package:audiobookflow/resources/latest_version_fetch.dart';
 import 'package:audiobookflow/resources/models/latest_version_fetch_model.dart';
 import 'package:audiobookflow/screens/four_read_login/four_read_login_screen.dart';
 import 'package:audiobookflow/utils/version_compare.dart';
-import 'package:url_launcher/url_launcher.dart';
 
 class Settings extends StatefulWidget {
   const Settings({super.key});
@@ -51,6 +50,7 @@ class _SettingsState extends State<Settings> {
   String _appVersion = '';
   LatestVersionFetchModel? _updateInfo;
   bool _checkingUpdate = false;
+  bool _updatingApp = false;
 
   static const Map<String, String> _sourceLabels = {
     'librivox': 'LibriVox',
@@ -103,6 +103,39 @@ class _SettingsState extends State<Settings> {
       },
     );
     if (_checkingUpdate) setState(() => _checkingUpdate = false);
+  }
+
+  Future<void> _downloadAndInstallUpdate() async {
+    final updateInfo = _updateInfo;
+    if (updateInfo == null || _updatingApp) return;
+
+    setState(() => _updatingApp = true);
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Downloading update...')),
+    );
+
+    try {
+      await LatestVersionFetch().downloadAndInstallUpdate(updateInfo);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Opening Android installer...')),
+      );
+    } on PlatformException catch (e) {
+      if (!mounted) return;
+      final message = e.code == 'INSTALL_PERMISSION_REQUIRED'
+          ? 'Allow Flow Book to install updates, then tap Update again.'
+          : e.message ?? 'Could not install the update.';
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(message)),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(e.toString())),
+      );
+    } finally {
+      if (mounted) setState(() => _updatingApp = false);
+    }
   }
 
   Future<void> _editLanguages() async {
@@ -218,8 +251,7 @@ class _SettingsState extends State<Settings> {
             ),
             FilledButton(
               onPressed: () async {
-                await _settingsBox.put(
-                    'enabledSearchSources', temp.toList());
+                await _settingsBox.put('enabledSearchSources', temp.toList());
                 setState(() {
                   _enabledSources = temp.toList();
                 });
@@ -412,25 +444,31 @@ class _SettingsState extends State<Settings> {
                 'Version ${_updateInfo!.latestVersion}',
                 style: TextStyle(color: Colors.orange.shade600),
               ),
-              trailing: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                decoration: BoxDecoration(
-                  color: Colors.orange.shade100,
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Text(
-                  'NEW',
-                  style: TextStyle(
-                    fontSize: 11,
-                    fontWeight: FontWeight.w700,
-                    color: Colors.orange.shade800,
-                  ),
-                ),
-              ),
-              onTap: () => launchUrl(
-                Uri.parse('https://github.com/everancii/Flow-Book/releases/latest'),
-                mode: LaunchMode.externalApplication,
-              ),
+              trailing: _updatingApp
+                  ? const SizedBox(
+                      width: 18,
+                      height: 18,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 4,
+                      ),
+                      decoration: BoxDecoration(
+                        color: Colors.orange.shade100,
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Text(
+                        'NEW',
+                        style: TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w700,
+                          color: Colors.orange.shade800,
+                        ),
+                      ),
+                    ),
+              onTap: _updatingApp ? null : _downloadAndInstallUpdate,
             ),
             const Divider(),
           ],
