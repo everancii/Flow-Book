@@ -8,9 +8,30 @@ import 'package:audiobookflow/resources/latest_version_fetch.dart';
 import 'package:audiobookflow/resources/models/latest_version_fetch_model.dart';
 import 'package:audiobookflow/screens/four_read_login/four_read_login_screen.dart';
 import 'package:audiobookflow/utils/version_compare.dart';
+import 'package:fpdart/fpdart.dart' show Either;
+
+typedef AppVersionLoader = Future<String> Function();
+typedef LatestVersionFetcher = Future<Either<String, LatestVersionFetchModel>>
+    Function();
 
 class Settings extends StatefulWidget {
-  const Settings({super.key});
+  const Settings({
+    super.key,
+    this.loadAppVersion = _loadBundledAppVersion,
+    this.fetchLatestVersion = _fetchLatestVersion,
+  });
+
+  final AppVersionLoader loadAppVersion;
+  final LatestVersionFetcher fetchLatestVersion;
+
+  static Future<String> _loadBundledAppVersion() async {
+    final info = await PlatformAssetBundle().load('assets/version.json');
+    return String.fromCharCodes(info.buffer.asUint8List());
+  }
+
+  static Future<Either<String, LatestVersionFetchModel>> _fetchLatestVersion() {
+    return LatestVersionFetch().getLatestVersion();
+  }
 
   @override
   State<Settings> createState() => _SettingsState();
@@ -77,19 +98,34 @@ class _SettingsState extends State<Settings> {
   }
 
   Future<void> _loadAppVersion() async {
-    final info = await PlatformAssetBundle().load('assets/version.json');
-    final versionString = String.fromCharCodes(info.buffer.asUint8List());
+    final versionString = await widget.loadAppVersion();
+    if (!mounted) return;
     setState(() {
       _appVersion = versionString;
     });
   }
 
-  Future<void> _checkForUpdate() async {
-    if (_appVersion.isEmpty) return;
+  Future<void> _checkForUpdate({bool manual = false}) async {
+    if (_appVersion.isEmpty) {
+      if (manual && mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Version is still loading.')),
+        );
+      }
+      return;
+    }
     setState(() => _checkingUpdate = true);
-    final result = await LatestVersionFetch().getLatestVersion();
+    final result = await widget.fetchLatestVersion();
+    if (!mounted) return;
     result.fold(
-      (_) {},
+      (message) {
+        setState(() => _checkingUpdate = false);
+        if (manual) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(message)),
+          );
+        }
+      },
       (model) {
         if (model.latestVersion != null &&
             compareVersions(model.latestVersion!, _appVersion) > 0) {
@@ -98,11 +134,18 @@ class _SettingsState extends State<Settings> {
             _checkingUpdate = false;
           });
         } else {
-          setState(() => _checkingUpdate = false);
+          setState(() {
+            _updateInfo = null;
+            _checkingUpdate = false;
+          });
+          if (manual) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text("You're up to date.")),
+            );
+          }
         }
       },
     );
-    if (_checkingUpdate) setState(() => _checkingUpdate = false);
   }
 
   Future<void> _downloadAndInstallUpdate() async {
@@ -475,6 +518,19 @@ class _SettingsState extends State<Settings> {
                     child: CircularProgressIndicator(strokeWidth: 2),
                   )
                 : null,
+          ),
+          ListTile(
+            leading: const Icon(Icons.system_update_alt),
+            title: const Text('Check for updates'),
+            subtitle: const Text('Look for the latest Flow Book release'),
+            trailing: _checkingUpdate
+                ? const SizedBox(
+                    width: 16,
+                    height: 16,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                : const Icon(Icons.refresh),
+            onTap: _checkingUpdate ? null : () => _checkForUpdate(manual: true),
           ),
         ],
       ),
