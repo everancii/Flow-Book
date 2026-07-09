@@ -4,6 +4,33 @@ import 'package:audio_service/audio_service.dart';
 import 'package:flutter/material.dart';
 import 'package:hive/hive.dart';
 
+Duration effectiveTrackLength(List<AudiobookFile> audiobookFiles, int index) {
+  final f = audiobookFiles[index];
+  if (f.durationMs != null) {
+    return Duration(milliseconds: f.durationMs!);
+  } else if (f.length != null) {
+    return Duration(seconds: f.length!.toInt());
+  } else if (f.startMs != null && index + 1 < audiobookFiles.length) {
+    final next = audiobookFiles[index + 1];
+    if (next.startMs != null) {
+      final diffMs = next.startMs! - f.startMs!;
+      return diffMs > 0 ? Duration(milliseconds: diffMs) : Duration.zero;
+    }
+  }
+  return Duration.zero;
+}
+
+String formatTrackDuration(Duration duration) {
+  final hours = duration.inHours;
+  final minutes = duration.inMinutes % 60;
+  final seconds = duration.inSeconds % 60;
+
+  if (hours > 0) {
+    return '$hours:${minutes.toString().padLeft(2, '0')}:${seconds.toString().padLeft(2, '0')}';
+  }
+  return '${minutes.toString().padLeft(2, '0')}:${seconds.toString().padLeft(2, '0')}';
+}
+
 class TrackSelectionDialog extends StatefulWidget {
   final MyAudioHandler audioHandler;
 
@@ -20,28 +47,13 @@ class _TrackSelectionDialogState extends State<TrackSelectionDialog> {
   late Box<dynamic> playingAudiobookDetailsBox;
   List<AudiobookFile> _audiobookFiles = [];
   int _currentTrackIndex = 0;
+  String? _lastQueueSignature;
 
   @override
   void initState() {
     super.initState();
     playingAudiobookDetailsBox = Hive.box('playing_audiobook_details_box');
     _loadCurrentData();
-  }
-
-  Duration _effectiveLength(int index) {
-    final f = _audiobookFiles[index];
-    if (f.durationMs != null) {
-      return Duration(milliseconds: f.durationMs!);
-    } else if (f.length != null) {
-      return Duration(seconds: f.length!.toInt());
-    } else if (f.startMs != null && index + 1 < _audiobookFiles.length) {
-      final next = _audiobookFiles[index + 1];
-      if (next.startMs != null) {
-        final diffMs = next.startMs! - f.startMs!;
-        return diffMs > 0 ? Duration(milliseconds: diffMs) : Duration.zero;
-      }
-    }
-    return Duration.zero;
   }
 
   void _loadCurrentData() {
@@ -59,17 +71,6 @@ class _TrackSelectionDialogState extends State<TrackSelectionDialog> {
     if (_currentTrackIndex == -1) _currentTrackIndex = 0;
   }
 
-  String _formatDuration(Duration duration) {
-    final hours = duration.inHours;
-    final minutes = duration.inMinutes % 60;
-    final seconds = duration.inSeconds % 60;
-
-    if (hours > 0) {
-      return '${hours}:${minutes.toString().padLeft(2, '0')}:${seconds.toString().padLeft(2, '0')}';
-    }
-    return '${minutes.toString().padLeft(2, '0')}:${seconds.toString().padLeft(2, '0')}';
-  }
-
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
@@ -77,9 +78,16 @@ class _TrackSelectionDialogState extends State<TrackSelectionDialog> {
     return StreamBuilder<List<MediaItem>>(
       stream: widget.audioHandler.queue,
       builder: (context, queueSnapshot) {
-        if (queueSnapshot.hasData) {
+        final queue = queueSnapshot.data;
+        final queueSignature = queue == null
+            ? null
+            : '${queue.length}:${queue.map((item) => item.id).join('|')}:${widget.audioHandler.mediaItem.value?.id}';
+        if (queueSignature != null && queueSignature != _lastQueueSignature) {
+          _lastQueueSignature = queueSignature;
           WidgetsBinding.instance.addPostFrameCallback((_) {
-            setState(() => _loadCurrentData());
+            if (mounted) {
+              setState(() => _loadCurrentData());
+            }
           });
         }
 
@@ -174,7 +182,9 @@ class _TrackSelectionDialogState extends State<TrackSelectionDialog> {
                             mainAxisSize: MainAxisSize.min,
                             children: [
                               Text(
-                                _formatDuration(_effectiveLength(index)),
+                                formatTrackDuration(
+                                  effectiveTrackLength(_audiobookFiles, index),
+                                ),
                                 style: TextStyle(
                                   color: isDark
                                       ? Colors.grey[400]
@@ -203,8 +213,7 @@ class _TrackSelectionDialogState extends State<TrackSelectionDialog> {
                 Container(
                   padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
-                    color:
-                        isDark ? const Color(0xFF282828) : Colors.grey[50],
+                    color: isDark ? const Color(0xFF282828) : Colors.grey[50],
                     borderRadius: const BorderRadius.only(
                       bottomLeft: Radius.circular(16),
                       bottomRight: Radius.circular(16),

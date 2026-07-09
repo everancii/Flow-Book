@@ -25,7 +25,6 @@ import 'widgets/equalizer_icon.dart';
 import 'widgets/progress_bar_widget.dart';
 import 'widgets/bookmarks_dialog.dart';
 import 'package:audiobookflow/screens/audiobook_player/widgets/favourite_button.dart';
-import 'package:audiobookflow/screens/download_audiobook/widget/download_button.dart';
 
 class AudiobookPlayer extends StatefulWidget {
   final VoidCallback? onSwipeDown;
@@ -435,19 +434,26 @@ class _AudiobookPlayerState extends State<AudiobookPlayer> {
                         maxLines: 1,
                       ),
                       ValueListenableBuilder<bool>(
-                        valueListenable: audioHandlerProvider.audioHandler.sleepTimer.isActive,
+                        valueListenable: audioHandlerProvider
+                            .audioHandler.sleepTimer.isActive,
                         builder: (context, isActive, child) {
-                          if (!isActive) return const SizedBox.shrink();
+                          if (!isActive) {
+                            return const SizedBox.shrink();
+                          }
                           return ValueListenableBuilder<Duration?>(
-                            valueListenable: audioHandlerProvider.audioHandler.sleepTimer.remainingTime,
+                            valueListenable: audioHandlerProvider
+                                .audioHandler.sleepTimer.remainingTime,
                             builder: (context, remaining, child) {
-                              if (remaining == null) return const SizedBox.shrink();
+                              if (remaining == null) {
+                                return const SizedBox.shrink();
+                              }
                               final minutes = remaining.inMinutes;
                               final seconds = remaining.inSeconds % 60;
                               return Row(
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
-                                  const Icon(Icons.snooze, size: 10, color: Colors.deepOrange),
+                                  const Icon(Icons.snooze,
+                                      size: 10, color: Colors.deepOrange),
                                   const SizedBox(width: 4),
                                   Text(
                                     '${minutes.toString().padLeft(2, '0')}:${seconds.toString().padLeft(2, '0')}',
@@ -537,7 +543,8 @@ class _AudiobookPlayerState extends State<AudiobookPlayer> {
             child: SafeArea(
               child: NotificationListener<OverscrollNotification>(
                 onNotification: (notification) {
-                  if (notification.overscroll < -50 && widget.onSwipeDown != null) {
+                  if (notification.overscroll < -50 &&
+                      widget.onSwipeDown != null) {
                     widget.onSwipeDown!();
                     return true;
                   }
@@ -668,17 +675,20 @@ class _AudiobookPlayerState extends State<AudiobookPlayer> {
                               : Colors.white.withValues(alpha: 0.6),
                           borderRadius: BorderRadius.circular(20),
                           border: Border.all(
-                            color: Theme.of(context).brightness == Brightness.dark
-                                ? Colors.white.withValues(alpha: 0.15)
-                                : Colors.white.withValues(alpha: 0.4),
+                            color:
+                                Theme.of(context).brightness == Brightness.dark
+                                    ? Colors.white.withValues(alpha: 0.15)
+                                    : Colors.white.withValues(alpha: 0.4),
                             width: 1.5,
                           ),
                         ),
                         child: ValueListenableBuilder<bool>(
-                          valueListenable: audioHandlerProvider.audioHandler.sleepTimer.isActive,
+                          valueListenable: audioHandlerProvider
+                              .audioHandler.sleepTimer.isActive,
                           builder: (context, isTimerActive, child) {
                             return ValueListenableBuilder<Duration?>(
-                              valueListenable: audioHandlerProvider.audioHandler.sleepTimer.remainingTime,
+                              valueListenable: audioHandlerProvider
+                                  .audioHandler.sleepTimer.remainingTime,
                               builder: (context, activeTimerDuration, child) {
                                 return ValueListenableBuilder<bool>(
                                   valueListenable: _skipSilenceNotifier,
@@ -699,7 +709,8 @@ class _AudiobookPlayerState extends State<AudiobookPlayer> {
                                         ScaffoldMessenger.of(context)
                                             .showSnackBar(
                                           SnackBar(
-                                            duration: const Duration(seconds: 1),
+                                            duration:
+                                                const Duration(seconds: 1),
                                             content: Text(
                                               newValue
                                                   ? 'Skip Silence Enabled'

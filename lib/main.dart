@@ -1,7 +1,4 @@
-import 'dart:io';
-
 import 'package:audiobookflow/resources/designs/theme_notifier.dart';
-import 'package:audiobookflow/resources/designs/themes.dart';
 import 'package:audiobookflow/resources/services/download/download_manager.dart';
 import 'package:audiobookflow/resources/services/update_data_backup_service.dart';
 import 'package:audiobookflow/resources/services/youtube/youtube_audiobook_notifier.dart';
@@ -89,8 +86,6 @@ Future<void> initHive() async {
   await Hive.openBox('listening_stats_box');
   await Hive.openBox('four_read_auth');
   await Hive.openBox('settings');
-  Box recommendedAudiobooksBox = Hive.box('recommened_audiobooks_box');
-
   isRecommendScreen = 0;
 
   await UpdateDataBackupService.restoreMissingDataAfterUpdate();

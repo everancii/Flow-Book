@@ -22,6 +22,7 @@ class _FourReadLoginScreenState extends State<FourReadLoginScreen> {
 
   Future<void> _checkLoginStatus() async {
     final loggedIn = await _authService.isLoggedIn();
+    if (!mounted) return;
     setState(() => _isLoggedIn = loggedIn);
   }
 
@@ -33,6 +34,7 @@ class _FourReadLoginScreenState extends State<FourReadLoginScreen> {
       ),
     );
 
+    if (!mounted) return;
     if (result == true) {
       setState(() => _isLoggedIn = true);
     }
@@ -40,6 +42,7 @@ class _FourReadLoginScreenState extends State<FourReadLoginScreen> {
 
   Future<void> _logout() async {
     await _authService.clearCredentials();
+    if (!mounted) return;
     setState(() => _isLoggedIn = false);
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(

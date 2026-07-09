@@ -11,7 +11,6 @@ class FourReadWebViewLogin extends StatefulWidget {
 }
 
 class _FourReadWebViewLoginState extends State<FourReadWebViewLogin> {
-  InAppWebViewController? _webViewController;
   final FourReadAuthService _authService = FourReadAuthService();
   bool _isLoggedIn = false;
   bool _isLoading = true;
@@ -42,9 +41,6 @@ class _FourReadWebViewLoginState extends State<FourReadWebViewLogin> {
               javaScriptEnabled: true,
               useShouldOverrideUrlLoading: true,
             ),
-            onWebViewCreated: (controller) {
-              _webViewController = controller;
-            },
             shouldOverrideUrlLoading: (controller, navigationAction) async {
               final url = navigationAction.request.url.toString();
               if (url.startsWith('intent://') || url.startsWith('market://')) {
@@ -53,11 +49,13 @@ class _FourReadWebViewLoginState extends State<FourReadWebViewLogin> {
               return NavigationActionPolicy.ALLOW;
             },
             onLoadStart: (controller, url) {
-              AppLogger.debug('[FourReadWebView] Loading: $url', 'FourReadWebView');
+              AppLogger.debug(
+                  '[FourReadWebView] Loading: $url', 'FourReadWebView');
             },
             onLoadStop: (controller, url) async {
-              AppLogger.debug('[FourReadWebView] Loaded: $url', 'FourReadWebView');
-              
+              AppLogger.debug(
+                  '[FourReadWebView] Loaded: $url', 'FourReadWebView');
+
               // Check if we're logged in by looking for logout link or user profile
               final isLoggedIn = await controller.evaluateJavascript(
                 source: '''
@@ -67,24 +65,31 @@ class _FourReadWebViewLoginState extends State<FourReadWebViewLogin> {
                   document.querySelector('.user-menu') !== null
                 ''',
               );
-              
-              AppLogger.debug('[FourReadWebView] Is logged in: $isLoggedIn', 'FourReadWebView');
-              
+              if (!mounted || !context.mounted) return;
+
+              AppLogger.debug('[FourReadWebView] Is logged in: $isLoggedIn',
+                  'FourReadWebView');
+
               if (isLoggedIn == true) {
                 // Extract cookies from CookieManager
                 final cookieManager = CookieManager.instance();
-                final cookies = await cookieManager.getCookies(url: WebUri('https://4read.org/'));
-                AppLogger.debug('[FourReadWebView] Cookies: $cookies', 'FourReadWebView');
-                
-                if (cookies != null && cookies.isNotEmpty) {
+                final scaffoldMessenger = ScaffoldMessenger.of(context);
+                final cookies = await cookieManager.getCookies(
+                    url: WebUri('https://4read.org/'));
+                AppLogger.debug(
+                    '[FourReadWebView] Cookies: $cookies', 'FourReadWebView');
+                if (!mounted) return;
+
+                if (cookies.isNotEmpty) {
                   final cookieString = cookies
                       .map((cookie) => '${cookie.name}=${cookie.value}')
                       .join('; ');
-                  
+
                   await _authService.saveCookies(cookieString);
+                  if (!mounted) return;
                   setState(() => _isLoggedIn = true);
-                  
-                  ScaffoldMessenger.of(context).showSnackBar(
+
+                  scaffoldMessenger.showSnackBar(
                     const SnackBar(
                       content: Text('Login successful!'),
                       backgroundColor: Colors.green,
@@ -93,7 +98,7 @@ class _FourReadWebViewLoginState extends State<FourReadWebViewLogin> {
                   );
                 }
               }
-              
+
               setState(() => _isLoading = false);
             },
           ),

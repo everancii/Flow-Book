@@ -1994,40 +1994,6 @@ class ArchiveApi {
     }
   }
 
-  Future<Either<String, List<Audiobook>>> _fetchAudiobooksWithOrigin(String url, String origin) async {
-    try {
-      final response = await http.get(Uri.parse(url));
-
-      if (response.statusCode == 200) {
-        final decoded = json.decode(response.body);
-        final docs =
-            (decoded['response']['docs'] as List).cast<Map<String, dynamic>>();
-
-        final byId = <String, Map<String, dynamic>>{};
-        for (final d in docs) {
-          final id = (d['identifier'] as String?)?.trim();
-          if (id == null || id.isEmpty) continue;
-          byId.putIfAbsent(id, () => d);
-        }
-
-        final audiobooks = byId.values
-            .where((book) => book["title"] != null && book["creator"] != null)
-            .where((book) {
-              final title = book["title"].toString().toLowerCase();
-              return !title.contains("thumbs") && title != 'null';
-            })
-            .map((book) => Audiobook.fromJson(book).copyWith(origin: origin))
-            .toList();
-
-        return Right(audiobooks);
-      } else {
-        throw Exception('Failed to load audiobooks');
-      }
-    } catch (e) {
-      return Left(e.toString());
-    }
-  }
-
   Future<Either<String, List<Audiobook>>> _fetchAudiobooks(String url) async {
     try {
       final response = await http.get(Uri.parse(url));

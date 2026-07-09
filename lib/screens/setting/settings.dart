@@ -295,41 +295,31 @@ class _SettingsState extends State<Settings> {
         borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
       ),
       builder: (ctx) {
-        return Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            RadioListTile<AppTheme>(
-              title: const Text('White (Light)'),
-              value: AppTheme.light,
-              groupValue: current,
-              onChanged: (v) {
-                if (v == null) return;
-                themeNotifier.setTheme(v);
-                Navigator.of(ctx).pop();
-              },
-            ),
-            RadioListTile<AppTheme>(
-              title: const Text('Dark'),
-              value: AppTheme.dark,
-              groupValue: current,
-              onChanged: (v) {
-                if (v == null) return;
-                themeNotifier.setTheme(v);
-                Navigator.of(ctx).pop();
-              },
-            ),
-            RadioListTile<AppTheme>(
-              title: const Text('Blue'),
-              value: AppTheme.blue,
-              groupValue: current,
-              onChanged: (v) {
-                if (v == null) return;
-                themeNotifier.setTheme(v);
-                Navigator.of(ctx).pop();
-              },
-            ),
-            const SizedBox(height: 8),
-          ],
+        return RadioGroup<AppTheme>(
+          groupValue: current,
+          onChanged: (v) {
+            if (v == null) return;
+            themeNotifier.setTheme(v);
+            Navigator.of(ctx).pop();
+          },
+          child: const Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              RadioListTile<AppTheme>(
+                title: Text('White (Light)'),
+                value: AppTheme.light,
+              ),
+              RadioListTile<AppTheme>(
+                title: Text('Dark'),
+                value: AppTheme.dark,
+              ),
+              RadioListTile<AppTheme>(
+                title: Text('Blue'),
+                value: AppTheme.blue,
+              ),
+              SizedBox(height: 8),
+            ],
+          ),
         );
       },
     );

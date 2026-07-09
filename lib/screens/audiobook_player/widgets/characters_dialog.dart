@@ -92,9 +92,6 @@ class _CharactersDialogState extends State<CharactersDialog> {
 
   void _reorderCharacters(int oldIndex, int newIndex) {
     setState(() {
-      if (newIndex > oldIndex) {
-        newIndex -= 1;
-      }
       final Character item = _filteredCharacters.removeAt(oldIndex);
       _filteredCharacters.insert(newIndex, item);
 
@@ -424,7 +421,7 @@ class _CharactersDialogState extends State<CharactersDialog> {
 
     return ReorderableListView.builder(
       itemCount: _filteredCharacters.length,
-      onReorder: _reorderCharacters,
+      onReorderItem: _reorderCharacters,
       buildDefaultDragHandles: false,
       itemBuilder: (context, index) {
         final character = _filteredCharacters[index];

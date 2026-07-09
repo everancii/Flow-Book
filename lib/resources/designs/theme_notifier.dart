@@ -15,7 +15,8 @@ class ThemeNotifier extends ChangeNotifier {
   }
 
   void _loadTheme() {
-    final saved = _themeBox.get('theme_mode_box', defaultValue: 'light') as String;
+    final saved =
+        _themeBox.get('theme_mode_box', defaultValue: 'light') as String;
 
     switch (saved) {
       case 'dark':
@@ -44,7 +45,6 @@ class ThemeNotifier extends ChangeNotifier {
       case AppTheme.blue:
         return Themes.blueTheme;
       case AppTheme.light:
-      default:
         return Themes.lightTheme;
     }
   }

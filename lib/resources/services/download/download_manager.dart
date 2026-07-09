@@ -1,6 +1,5 @@
 import 'dart:async';
 import 'dart:io';
-import 'dart:math' as math;
 import 'package:audiobookflow/resources/services/youtube/stream_client.dart';
 import 'package:audiobookflow/utils/app_logger.dart';
 import 'package:background_downloader/background_downloader.dart';
@@ -185,7 +184,7 @@ class DownloadManager {
                   : 0.0;
               totalProgress = (completedFiles + fileProgress) / totalFiles;
               onProgressUpdate(totalProgress);
-              
+
               _progressController.add(DownloadProgress(
                 audiobookId: audiobookId,
                 progress: totalProgress,
@@ -252,7 +251,7 @@ class DownloadManager {
               }
               totalProgress = (completedFiles + progress) / totalFiles;
               onProgressUpdate(totalProgress);
-              
+
               _progressController.add(DownloadProgress(
                 audiobookId: audiobookId,
                 progress: totalProgress,
@@ -444,12 +443,14 @@ class DownloadManager {
         final status = downloadStatusBox.get(key);
         if (status == null || status['isCompleted'] != true) continue;
 
-        final audiobookId = status['audiobookId'] ?? key.toString().replaceFirst('status_', '');
+        final audiobookId =
+            status['audiobookId'] ?? key.toString().replaceFirst('status_', '');
         final safeId = _safeDirectoryName(audiobookId);
         final dir = Directory('${baseDir.path}/downloads/$safeId');
         if (!await dir.exists()) {
           await downloadStatusBox.delete(key);
-          AppLogger.debug('Cleaned stale download status (no dir): $audiobookId');
+          AppLogger.debug(
+              'Cleaned stale download status (no dir): $audiobookId');
           continue;
         }
         // Directory exists — check if it has actual audio files
@@ -462,7 +463,8 @@ class DownloadManager {
         }
         if (!hasAudio) {
           await downloadStatusBox.delete(key);
-          AppLogger.debug('Cleaned stale download status (no audio files): $audiobookId');
+          AppLogger.debug(
+              'Cleaned stale download status (no audio files): $audiobookId');
         }
       }
     } catch (e) {

@@ -24,6 +24,157 @@ Uri? _artUriFrom(String? s) {
   return local != null ? Uri.file(local) : Uri.parse(s);
 }
 
+abstract class PlaybackEngine {
+  int? get currentIndex;
+  Duration get position;
+  Duration get bufferedPosition;
+  Duration? get duration;
+  double get speed;
+  bool get playing;
+  ProcessingState get processingState;
+  List<IndexedAudioSource> get sequence;
+  PlaybackEvent get playbackEvent;
+
+  Stream<PlaybackEvent> get playbackEventStream;
+  Stream<PlayerState> get playerStateStream;
+  Stream<bool> get playingStream;
+  Stream<Duration> get bufferedPositionStream;
+  Stream<Duration> get positionStream;
+  Stream<int?> get currentIndexStream;
+  Stream<ProcessingState> get processingStateStream;
+
+  Future<void> setAndroidAudioAttributes(AndroidAudioAttributes attributes);
+  Future<void> stop();
+  Future<void> setAudioSources(
+    List<AudioSource> sources, {
+    required int initialIndex,
+    required Duration initialPosition,
+    required bool preload,
+  });
+  Future<void> seek(Duration position, {int? index});
+  Future<void> play();
+  Future<void> pause();
+  Future<void> seekToNext();
+  Future<void> seekToPrevious();
+  Future<void> setSpeed(double speed);
+  Future<void> setVolume(double volume);
+  Future<void> setSkipSilenceEnabled(bool skipSilence);
+  Future<void> setBalance(double balance);
+  Future<void> setPitch(double pitch);
+}
+
+class JustAudioPlaybackEngine implements PlaybackEngine {
+  JustAudioPlaybackEngine(this._player);
+
+  final AudioPlayer _player;
+
+  @override
+  int? get currentIndex => _player.currentIndex;
+
+  @override
+  Duration get position => _player.position;
+
+  @override
+  Duration get bufferedPosition => _player.bufferedPosition;
+
+  @override
+  Duration? get duration => _player.duration;
+
+  @override
+  double get speed => _player.speed;
+
+  @override
+  bool get playing => _player.playing;
+
+  @override
+  ProcessingState get processingState => _player.processingState;
+
+  @override
+  List<IndexedAudioSource> get sequence => _player.sequence;
+
+  @override
+  PlaybackEvent get playbackEvent => _player.playbackEvent;
+
+  @override
+  Stream<PlaybackEvent> get playbackEventStream => _player.playbackEventStream;
+
+  @override
+  Stream<PlayerState> get playerStateStream => _player.playerStateStream;
+
+  @override
+  Stream<bool> get playingStream => _player.playingStream;
+
+  @override
+  Stream<Duration> get bufferedPositionStream => _player.bufferedPositionStream;
+
+  @override
+  Stream<Duration> get positionStream => _player.positionStream;
+
+  @override
+  Stream<int?> get currentIndexStream => _player.currentIndexStream;
+
+  @override
+  Stream<ProcessingState> get processingStateStream =>
+      _player.processingStateStream;
+
+  @override
+  Future<void> setAndroidAudioAttributes(AndroidAudioAttributes attributes) {
+    return _player.setAndroidAudioAttributes(attributes);
+  }
+
+  @override
+  Future<void> stop() => _player.stop();
+
+  @override
+  Future<void> setAudioSources(
+    List<AudioSource> sources, {
+    required int initialIndex,
+    required Duration initialPosition,
+    required bool preload,
+  }) {
+    return _player.setAudioSources(
+      sources,
+      initialIndex: initialIndex,
+      initialPosition: initialPosition,
+      preload: preload,
+    );
+  }
+
+  @override
+  Future<void> seek(Duration position, {int? index}) {
+    return _player.seek(position, index: index);
+  }
+
+  @override
+  Future<void> play() => _player.play();
+
+  @override
+  Future<void> pause() => _player.pause();
+
+  @override
+  Future<void> seekToNext() => _player.seekToNext();
+
+  @override
+  Future<void> seekToPrevious() => _player.seekToPrevious();
+
+  @override
+  Future<void> setSpeed(double speed) => _player.setSpeed(speed);
+
+  @override
+  Future<void> setVolume(double volume) => _player.setVolume(volume);
+
+  @override
+  Future<void> setSkipSilenceEnabled(bool skipSilence) {
+    return _player.setSkipSilenceEnabled(skipSilence);
+  }
+
+  @override
+  Future<void> setBalance(double balance) => _player.setBalance(balance);
+
+  @override
+  Future<void> setPitch(double pitch) => _player.setPitch(pitch);
+}
+
 class MyAudioHandler extends BaseAudioHandler {
   // Audio effects (Android-only)
   final AndroidEqualizer? _equalizer =
@@ -31,7 +182,8 @@ class MyAudioHandler extends BaseAudioHandler {
   final AndroidLoudnessEnhancer? _loudnessEnhancer =
       Platform.isAndroid ? AndroidLoudnessEnhancer() : null;
 
-  late final AudioPlayer _player;
+  late final PlaybackEngine _player;
+  final bool _configureAudioSession;
 
   // Global sleep timer
   final OptimizedTimer sleepTimer = OptimizedTimer();
@@ -49,16 +201,22 @@ class MyAudioHandler extends BaseAudioHandler {
   bool _isReinitializing = false;
   int _initGen = 0;
 
-  MyAudioHandler() {
+  MyAudioHandler({
+    PlaybackEngine? player,
+    bool configureAudioSession = true,
+  }) : _configureAudioSession = configureAudioSession {
     final effects = [
       if (_equalizer != null) _equalizer,
       if (_loudnessEnhancer != null) _loudnessEnhancer,
     ];
-    _player = AudioPlayer(
-      audioPipeline: AudioPipeline(
-        androidAudioEffects: effects,
-      ),
-    );
+    _player = player ??
+        JustAudioPlaybackEngine(
+          AudioPlayer(
+            audioPipeline: AudioPipeline(
+              androidAudioEffects: effects,
+            ),
+          ),
+        );
   }
 
   StreamSubscription<String>? _coverSub;
@@ -109,6 +267,12 @@ class MyAudioHandler extends BaseAudioHandler {
 
   Future<void> _ensureAudioSession() async {
     if (_sessionConfigured) return;
+
+    if (!_configureAudioSession) {
+      _sessionConfigured = true;
+      _bindStatePipelines();
+      return;
+    }
 
     final session = await AudioSession.instance;
     await session.configure(const AudioSessionConfiguration.music());
@@ -296,7 +460,9 @@ class MyAudioHandler extends BaseAudioHandler {
           title: song.title ?? '',
           artist: audiobook.author ?? 'Unknown',
           artUri: art,
-          duration: Duration(milliseconds: song.durationMs ?? (song.length != null ? (song.length! * 1000).toInt() : 0)),
+          duration: Duration(
+              milliseconds: song.durationMs ??
+                  (song.length != null ? (song.length! * 1000).toInt() : 0)),
           extras: {
             'url': song.url,
             'audiobook_id': audiobook.id,
@@ -371,14 +537,15 @@ class MyAudioHandler extends BaseAudioHandler {
       }
 
       if (playImmediately) {
-        AppLogger.debug('initSongs: calling _player.play(), state=${_player.processingState}');
+        AppLogger.debug(
+            'initSongs: calling _player.play(), state=${_player.processingState}');
         _player.play();
-        
+
         // Listen for processing state changes to re-trigger play if we enter buffering
         DateTime? bufferingStarted;
         final sub = _player.processingStateStream.listen((state) {
           AppLogger.debug('initSongs: processingState=$state');
-          
+
           if (state == ProcessingState.ready) {
             AppLogger.debug('initSongs: player ready, ensuring play');
             bufferingStarted = null;
@@ -395,12 +562,13 @@ class MyAudioHandler extends BaseAudioHandler {
               }
             });
           }
-          
+
           // If stuck in buffering for more than 30 seconds, log and try to recover
           if (state == ProcessingState.buffering && bufferingStarted != null) {
             final stuckDuration = DateTime.now().difference(bufferingStarted!);
             if (stuckDuration > const Duration(seconds: 30)) {
-              AppLogger.error('initSongs: stuck in buffering for ${stuckDuration.inSeconds}s, attempting skip');
+              AppLogger.error(
+                  'initSongs: stuck in buffering for ${stuckDuration.inSeconds}s, attempting skip');
               bufferingStarted = null;
               // Try to skip to next track
               Future.delayed(const Duration(milliseconds: 100), () {
@@ -412,7 +580,7 @@ class MyAudioHandler extends BaseAudioHandler {
             }
           }
         });
-        
+
         // Timeout to cancel the listener
         Future.delayed(const Duration(seconds: 60), () => sub.cancel());
       }
@@ -539,7 +707,8 @@ class MyAudioHandler extends BaseAudioHandler {
     final currentIndex = _player.currentIndex;
     final isYT = currentIndex != null && _isIndexYouTube(currentIndex);
     final needsBuffering = (processing == ProcessingState.buffering ||
-        processing == ProcessingState.loading) && !playing;
+            processing == ProcessingState.loading) &&
+        !playing;
     isBufferingYouTube.value = isYT && needsBuffering;
 
     // Update buffering progress so play buttons can show a real %.
@@ -604,10 +773,12 @@ class MyAudioHandler extends BaseAudioHandler {
       final statsBox = Hive.box('listening_stats_box');
       final current = statsBox.get('totalSeconds', defaultValue: 0) as int;
       statsBox.put('totalSeconds', current + 10);
-      statsBox.put('totalSessions', (statsBox.get('totalSessions', defaultValue: 0) as int) + 1);
+      statsBox.put('totalSessions',
+          (statsBox.get('totalSessions', defaultValue: 0) as int) + 1);
       final today = DateTime.now().toIso8601String().substring(0, 10);
       statsBox.put('lastDate', today);
-      final streak = (statsBox.get('streak', defaultValue: <String>[]) as List).cast<String>();
+      final streak = (statsBox.get('streak', defaultValue: <String>[]) as List)
+          .cast<String>();
       if (!streak.contains(today)) {
         streak.add(today);
         if (streak.length > 365) streak.removeAt(0);
@@ -622,22 +793,19 @@ class MyAudioHandler extends BaseAudioHandler {
       _player.bufferedPositionStream,
       _player.currentIndexStream,
       (position, bufferedPosition, index) {
-        final currentSequence = _player.sequence ?? [];
+        final currentSequence = _player.sequence;
 
         if (index != null && index < currentSequence.length) {
           final tag = currentSequence[index].tag;
           final item = tag as MediaItem?;
           final metaDuration = item?.duration ??
-              Duration(
-                  milliseconds: item?.extras?['durationMs'] as int? ?? 0);
+              Duration(milliseconds: item?.extras?['durationMs'] as int? ?? 0);
 
           // Use player's actual duration as primary, fallback to metadata
           final trackDuration = _player.duration != null &&
                   _player.duration! > Duration.zero
               ? _player.duration!
-              : (metaDuration > Duration.zero
-                  ? metaDuration
-                  : Duration.zero);
+              : (metaDuration > Duration.zero ? metaDuration : Duration.zero);
 
           return PositionData(position, bufferedPosition, trackDuration);
         }
@@ -647,7 +815,8 @@ class MyAudioHandler extends BaseAudioHandler {
     );
   }
 
-  Future<void> _restoreQueueFromBoxIfEmpty({bool playImmediately = false}) async {
+  Future<void> _restoreQueueFromBoxIfEmpty(
+      {bool playImmediately = false}) async {
     if (_isReinitializing) return;
     if ((_audioSources?.isNotEmpty ?? false)) return;
 
@@ -667,7 +836,8 @@ class MyAudioHandler extends BaseAudioHandler {
       final index = (box.get('index') as int?) ?? 0;
       final position = (box.get('position') as int?) ?? 0;
 
-      await initSongs(files, audiobook, index, position, playImmediately: playImmediately);
+      await initSongs(files, audiobook, index, position,
+          playImmediately: playImmediately);
     } catch (_) {}
   }
 
@@ -679,21 +849,27 @@ class MyAudioHandler extends BaseAudioHandler {
   List<AudioSource> getAudioSourcesFromPlaylist() {
     return _audioSources ?? const [];
   }
-@override
-Future<void> play() async {
-  AppLogger.debug('MyAudioHandler: play() called, processingState=${_player.processingState}, playing=${_player.playing}');
-  await _restoreQueueFromBoxIfEmpty(); // only at cold start
 
-  await _player.play();
+  @override
+  Future<void> play() async {
+    AppLogger.debug(
+        'MyAudioHandler: play() called, processingState=${_player.processingState}, playing=${_player.playing}');
+    await _restoreQueueFromBoxIfEmpty(); // only at cold start
 
-  _broadcastState(_player.playbackEvent);
-}
+    await _player.play();
+
+    _broadcastState(_player.playbackEvent);
+  }
+
   @override
   Future<void> pause() async {
     await _player.pause();
     final id = _activeAudiobookId;
     final idx = _player.currentIndex;
-    if (_canPersistProgress && !_isReinitializing && id != null && idx != null) {
+    if (_canPersistProgress &&
+        !_isReinitializing &&
+        id != null &&
+        idx != null) {
       _persistNow(id, idx);
     }
     _broadcastState(_player.playbackEvent);

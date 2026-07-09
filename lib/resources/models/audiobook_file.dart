@@ -343,13 +343,15 @@ class AudiobookFile {
       String playlistAuthor = '';
       try {
         final playlist = await yt.playlists.get(playlistId).timeout(
-          const Duration(seconds: 15),
-        );
+              const Duration(seconds: 15),
+            );
         playlistTitle = playlist.title;
         playlistAuthor = playlist.author;
-        AppLogger.debug('_fromYoutubePlaylistId: playlist title="$playlistTitle", author="$playlistAuthor"');
+        AppLogger.debug(
+            '_fromYoutubePlaylistId: playlist title="$playlistTitle", author="$playlistAuthor"');
       } catch (e) {
-        AppLogger.debug('_fromYoutubePlaylistId: failed to get playlist metadata: $e');
+        AppLogger.debug(
+            '_fromYoutubePlaylistId: failed to get playlist metadata: $e');
       }
 
       // Fetch playlist videos via HTTP API (yt.playlists.getVideos is broken in this fork)
@@ -370,7 +372,8 @@ class AudiobookFile {
           'size': 0,
           'length': 0.0,
           'url': 'https://www.youtube.com/watch?v=${video['id']}',
-          'highQCoverImage': video['thumbnail'] ?? 'https://i.ytimg.com/vi/${video['id']}/hqdefault.jpg',
+          'highQCoverImage': video['thumbnail'] ??
+              'https://i.ytimg.com/vi/${video['id']}/hqdefault.jpg',
         });
       }).toList();
 
@@ -396,90 +399,15 @@ class AudiobookFile {
     try {
       // Use YouTube's InnerTube API to get playlist content
       // ANDROID_VR is more resilient and still returns the old Renderer structure
-      final apiUrl = Uri.parse('https://www.youtube.com/youtubei/v1/browse?key=AIzaSyAO_FJ2SlqU8Q4STEHLGCilw_Y9_11qcW8');
-      final apiResponse = await http.post(
-        apiUrl,
-        headers: {
-          'Content-Type': 'application/json',
-          'User-Agent': 'Mozilla/5.0 (Linux; Android 10; Quest 2) AppleWebKit/537.36 (KHTML, like Gecko) OculusBrowser/15.0.0.0.22 SamsungBrowser/4.0 Chrome/89.0.4389.90 Mobile Safari/537.36',
-        },
-        body: jsonEncode({
-          'context': {
-            'client': {
-              'clientName': 'ANDROID_VR',
-              'clientVersion': '1.50.41',
-              'hl': 'en',
-              'gl': 'US',
-            },
-          },
-          'browseId': 'VL$playlistId',
-        }),
-      ).timeout(const Duration(seconds: 20));
-
-      if (apiResponse.statusCode != 200) {
-        AppLogger.debug('fetchPlaylistVideosViaHttp: API request failed with status ${apiResponse.statusCode}');
-        return videos;
-      }
-
-      final apiData = jsonDecode(apiResponse.body);
-
-      // Navigate the response structure to find videos
-      // Supports both twoColumn and singleColumn (VR) structures
-      var contents = apiData['contents']?['twoColumnBrowseResultsRenderer']?['tabs']?[0]?['tabRenderer']?['content']?['sectionListRenderer']?['contents']?[0]?['itemSectionRenderer']?['contents']?[0]?['playlistVideoListRenderer']?['contents'];
-
-      if (contents == null) {
-        // Alternative path for ANDROID_VR/mobile clients
-        contents = apiData['contents']?['singleColumnBrowseResultsRenderer']?['tabs']?[0]?['tabRenderer']?['content']?['sectionListRenderer']?['contents']?[0]?['playlistVideoListRenderer']?['contents'];
-      }
-
-      if (contents == null) {
-        // Yet another alternative path seen in some ANDROID_VR responses
-        contents = apiData['contents']?['singleColumnBrowseResultsRenderer']?['tabs']?[0]?['tabRenderer']?['content']?['sectionListRenderer']?['contents']?[0]?['itemSectionRenderer']?['contents']?[0]?['playlistVideoListRenderer']?['contents'];
-      }
-
-      if (contents == null || contents is! List) {
-        AppLogger.debug('fetchPlaylistVideosViaHttp: no playlist contents found');
-        return videos;
-      }
-
-      String? continuationToken;
-
-      for (final item in contents) {
-        if (item.containsKey('playlistVideoRenderer')) {
-          final renderer = item['playlistVideoRenderer'];
-          final videoId = renderer['videoId'] as String?;
-          final titleRuns = renderer['title']?['runs'] as List?;
-          final title = titleRuns?.isNotEmpty == true ? titleRuns![0]['text'] as String? : null;
-
-          if (videoId != null && title != null) {
-            videos.add({
-              'id': videoId,
-              'title': title,
-              'thumbnail': 'https://i.ytimg.com/vi/$videoId/hqdefault.jpg',
-            });
-          }
-        } else if (item.containsKey('continuationItemRenderer')) {
-          continuationToken = item['continuationItemRenderer']?['continuationEndpoint']?['continuationCommand']?['token'] as String?;
-        }
-      }
-
-      AppLogger.debug('fetchPlaylistVideosViaHttp: found ${videos.length} videos from API');
-
-      // Report the initial page (page 1) result.
-      onProgress?.call(1, videos.length);
-
-      // Fetch additional pages via continuation tokens
-      int maxPages = 10;
-      int page = 0;
-      while (continuationToken != null && page < maxPages && videos.length < 100) {
-        // Report "loading page N" (continuation pages are page 2, 3, …).
-        onProgress?.call(page + 2, videos.length);
-        try {
-          final contResponse = await http.post(
+      final apiUrl = Uri.parse(
+          'https://www.youtube.com/youtubei/v1/browse?key=AIzaSyAO_FJ2SlqU8Q4STEHLGCilw_Y9_11qcW8');
+      final apiResponse = await http
+          .post(
             apiUrl,
             headers: {
               'Content-Type': 'application/json',
-              'User-Agent': 'Mozilla/5.0 (Linux; Android 10; Quest 2) AppleWebKit/537.36 (KHTML, like Gecko) OculusBrowser/15.0.0.0.22 SamsungBrowser/4.0 Chrome/89.0.4389.90 Mobile Safari/537.36',
+              'User-Agent':
+                  'Mozilla/5.0 (Linux; Android 10; Quest 2) AppleWebKit/537.36 (KHTML, like Gecko) OculusBrowser/15.0.0.0.22 SamsungBrowser/4.0 Chrome/89.0.4389.90 Mobile Safari/537.36',
             },
             body: jsonEncode({
               'context': {
@@ -490,13 +418,108 @@ class AudiobookFile {
                   'gl': 'US',
                 },
               },
-              'continuation': continuationToken,
+              'browseId': 'VL$playlistId',
             }),
-          ).timeout(const Duration(seconds: 15));
+          )
+          .timeout(const Duration(seconds: 20));
+
+      if (apiResponse.statusCode != 200) {
+        AppLogger.debug(
+            'fetchPlaylistVideosViaHttp: API request failed with status ${apiResponse.statusCode}');
+        return videos;
+      }
+
+      final apiData = jsonDecode(apiResponse.body);
+
+      // Navigate the response structure to find videos
+      // Supports both twoColumn and singleColumn (VR) structures
+      var contents = apiData['contents']?['twoColumnBrowseResultsRenderer']
+                  ?['tabs']?[0]?['tabRenderer']?['content']
+              ?['sectionListRenderer']?['contents']?[0]?['itemSectionRenderer']
+          ?['contents']?[0]?['playlistVideoListRenderer']?['contents'];
+
+      // Alternative path for ANDROID_VR/mobile clients
+      contents ??= apiData['contents']?['singleColumnBrowseResultsRenderer']
+              ?['tabs']?[0]?['tabRenderer']?['content']?['sectionListRenderer']
+          ?['contents']?[0]?['playlistVideoListRenderer']?['contents'];
+
+      // Yet another alternative path seen in some ANDROID_VR responses
+      contents ??= apiData['contents']?['singleColumnBrowseResultsRenderer']
+                  ?['tabs']?[0]?['tabRenderer']?['content']
+              ?['sectionListRenderer']?['contents']?[0]?['itemSectionRenderer']
+          ?['contents']?[0]?['playlistVideoListRenderer']?['contents'];
+
+      if (contents == null || contents is! List) {
+        AppLogger.debug(
+            'fetchPlaylistVideosViaHttp: no playlist contents found');
+        return videos;
+      }
+
+      String? continuationToken;
+
+      for (final item in contents) {
+        if (item.containsKey('playlistVideoRenderer')) {
+          final renderer = item['playlistVideoRenderer'];
+          final videoId = renderer['videoId'] as String?;
+          final titleRuns = renderer['title']?['runs'] as List?;
+          final title = titleRuns?.isNotEmpty == true
+              ? titleRuns![0]['text'] as String?
+              : null;
+
+          if (videoId != null && title != null) {
+            videos.add({
+              'id': videoId,
+              'title': title,
+              'thumbnail': 'https://i.ytimg.com/vi/$videoId/hqdefault.jpg',
+            });
+          }
+        } else if (item.containsKey('continuationItemRenderer')) {
+          continuationToken = item['continuationItemRenderer']
+                  ?['continuationEndpoint']?['continuationCommand']?['token']
+              as String?;
+        }
+      }
+
+      AppLogger.debug(
+          'fetchPlaylistVideosViaHttp: found ${videos.length} videos from API');
+
+      // Report the initial page (page 1) result.
+      onProgress?.call(1, videos.length);
+
+      // Fetch additional pages via continuation tokens
+      int maxPages = 10;
+      int page = 0;
+      while (
+          continuationToken != null && page < maxPages && videos.length < 100) {
+        // Report "loading page N" (continuation pages are page 2, 3, …).
+        onProgress?.call(page + 2, videos.length);
+        try {
+          final contResponse = await http
+              .post(
+                apiUrl,
+                headers: {
+                  'Content-Type': 'application/json',
+                  'User-Agent':
+                      'Mozilla/5.0 (Linux; Android 10; Quest 2) AppleWebKit/537.36 (KHTML, like Gecko) OculusBrowser/15.0.0.0.22 SamsungBrowser/4.0 Chrome/89.0.4389.90 Mobile Safari/537.36',
+                },
+                body: jsonEncode({
+                  'context': {
+                    'client': {
+                      'clientName': 'ANDROID_VR',
+                      'clientVersion': '1.50.41',
+                      'hl': 'en',
+                      'gl': 'US',
+                    },
+                  },
+                  'continuation': continuationToken,
+                }),
+              )
+              .timeout(const Duration(seconds: 15));
 
           if (contResponse.statusCode == 200) {
             final contData = jsonDecode(contResponse.body);
-            final continuationItems = contData['onResponseReceivedActions']?[0]?['appendContinuationItemsAction']?['continuationItems'];
+            final continuationItems = contData['onResponseReceivedActions']?[0]
+                ?['appendContinuationItemsAction']?['continuationItems'];
 
             if (continuationItems == null || continuationItems is! List) {
               break;
@@ -509,17 +532,22 @@ class AudiobookFile {
                 final renderer = item['playlistVideoRenderer'];
                 final videoId = renderer['videoId'] as String?;
                 final titleRuns = renderer['title']?['runs'] as List?;
-                final title = titleRuns?.isNotEmpty == true ? titleRuns![0]['text'] as String? : null;
+                final title = titleRuns?.isNotEmpty == true
+                    ? titleRuns![0]['text'] as String?
+                    : null;
 
                 if (videoId != null && title != null) {
                   videos.add({
                     'id': videoId,
                     'title': title,
-                    'thumbnail': 'https://i.ytimg.com/vi/$videoId/hqdefault.jpg',
+                    'thumbnail':
+                        'https://i.ytimg.com/vi/$videoId/hqdefault.jpg',
                   });
                 }
               } else if (item.containsKey('continuationItemRenderer')) {
-                continuationToken = item['continuationItemRenderer']?['continuationEndpoint']?['continuationCommand']?['token'] as String?;
+                continuationToken = item['continuationItemRenderer']
+                        ?['continuationEndpoint']?['continuationCommand']
+                    ?['token'] as String?;
               }
             }
           } else {
@@ -751,7 +779,8 @@ class AudiobookFile {
         startMs = map["startMs"],
         durationMs = map["durationMs"] {
     if (title != null && length != null && length! > 0) {
-      AppLogger.debug('AudiobookFile: title="$title", lengthSeconds=${length!.toStringAsFixed(0)}');
+      AppLogger.debug(
+          'AudiobookFile: title="$title", lengthSeconds=${length!.toStringAsFixed(0)}');
     }
   }
 
