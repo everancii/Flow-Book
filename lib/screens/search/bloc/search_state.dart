@@ -40,11 +40,13 @@ class SearchSuccess extends SearchState {
   final List<Audiobook> archiveOrgAudiobooks;
   final List<Audiobook> fourReadAudiobooks;
   final List<Audiobook> knigavuheAudiobooks;
+  final List<Audiobook> soundBooksAudiobooks;
   final bool hasMoreLibrivox;
   final bool hasMoreYoutube;
   final bool hasMoreArchiveOrg;
   final bool hasMoreFourRead;
   final bool hasMoreKnigavuhe;
+  final bool hasMoreSoundBooks;
 
   SearchSuccess({
     required this.librivoxAudiobooks,
@@ -52,11 +54,13 @@ class SearchSuccess extends SearchState {
     required this.archiveOrgAudiobooks,
     required this.fourReadAudiobooks,
     required this.knigavuheAudiobooks,
+    required this.soundBooksAudiobooks,
     this.hasMoreLibrivox = false,
     this.hasMoreYoutube = false,
     this.hasMoreArchiveOrg = false,
     this.hasMoreFourRead = false,
     this.hasMoreKnigavuhe = false,
+    this.hasMoreSoundBooks = false,
   });
 
   List<Audiobook> get audiobooks => [
@@ -65,10 +69,11 @@ class SearchSuccess extends SearchState {
         ...archiveOrgAudiobooks,
         ...fourReadAudiobooks,
         ...knigavuheAudiobooks,
+        ...soundBooksAudiobooks,
       ];
 
   bool get hasMoreResults =>
-      hasMoreLibrivox || hasMoreYoutube || hasMoreArchiveOrg || hasMoreFourRead || hasMoreKnigavuhe;
+      hasMoreLibrivox || hasMoreYoutube || hasMoreArchiveOrg || hasMoreFourRead || hasMoreKnigavuhe || hasMoreSoundBooks;
 }
 
 class SearchFailure extends SearchState {

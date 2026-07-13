@@ -7,6 +7,7 @@ import 'package:hive/hive.dart';
 import 'package:audiobookflow/resources/models/audiobook.dart';
 import 'package:audiobookflow/resources/models/audiobook_file.dart';
 import 'package:audiobookflow/resources/services/audio_handler_provider.dart';
+import 'package:audiobookflow/resources/services/soundbooks/soundbooks_detail_service.dart';
 import 'package:go_router/go_router.dart';
 import 'package:audiobookflow/screens/audiobook_player/audiobook_player.dart';
 import 'package:audiobookflow/screens/audiobook_player/widgets/favourite_button.dart';
@@ -38,6 +39,7 @@ class MiniAudioPlayer extends StatefulWidget {
 class _MiniAudioPlayerState extends State<MiniAudioPlayer> {
   late final WeSlideController weSlideController;
   String? _initializedAudiobookId; // avoid re-init
+  static bool _startupRestoreDone = false; // one-shot app-start restore
 
   @override
   void initState() {
@@ -56,9 +58,19 @@ class _MiniAudioPlayerState extends State<MiniAudioPlayer> {
     if (audiobookMap == null) return;
 
     final audiobook = Audiobook.fromMap(Map<String, dynamic>.from(audiobookMap));
-    
+
+    // Only restore from Hive on initial app startup. After that, all
+    // initSongs calls come from explicit user actions (tap play, open
+    // book details). Re-firing restore on every didChangeDependencies
+    // (which triggers on navigation, Hive watch events, theme changes)
+    // races with explicit initSongs and replays the previous book.
+    if (_startupRestoreDone) return;
+    _startupRestoreDone = true;
+
     // Defer initialization to avoid blocking startup
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (provider.audioHandler.isReinitializing) return;
+
       final handlerIsEmpty =
           provider.audioHandler.getAudioSourcesFromPlaylist().isEmpty;
       if (!handlerIsEmpty && _initializedAudiobookId == audiobook.id) {
@@ -66,7 +78,18 @@ class _MiniAudioPlayerState extends State<MiniAudioPlayer> {
       }
 
       final files = (box.get('audiobookFiles') as List)
-          .map((e) => AudiobookFile.fromMap(Map<String, dynamic>.from(e)))
+          .map((e) {
+            final m = Map<String, dynamic>.from(e as Map);
+            // Heal-on-read: old persisted state (from before the URL
+            // encoding fix) may contain raw non-ASCII / spaces in the
+            // URL. Encode them before handing to the player.
+            final url = m['url'] as String?;
+            if (url != null &&
+                url.codeUnits.any((u) => u > 0x7F || u == 0x20)) {
+              m['url'] = encodeTrackUrl(url);
+            }
+            return AudiobookFile.fromMap(m);
+          })
           .toList();
       final index = box.get('index') as int;
       final position = box.get('position') as int;

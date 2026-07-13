@@ -22,6 +22,7 @@ class YouTubeAudioSource extends StreamAudioSource {
   final String quality; // 'high' or 'low'
   static final YoutubeExplode _sharedYtExplode = YoutubeExplode();
   final AudioStreamClient _streamClient;
+  static final Set<String> _cachingIds = {};
 
   YouTubeAudioSource({
     required this.videoId,
@@ -55,6 +56,116 @@ class YouTubeAudioSource extends StreamAudioSource {
       }
     } catch (_) {}
     return null;
+  }
+
+  /// Returns (tempFile, finalFile) for caching, or null if metadata is missing.
+  Future<(File temp, File finalFile)?> _getCachePaths() async {
+    try {
+      final tag = this.tag as MediaItem?;
+      if (tag == null) return null;
+
+      final audiobookId = tag.extras?['audiobook_id'] as String?;
+      final fileTitle = tag.title;
+      if (audiobookId == null || fileTitle.isEmpty) return null;
+
+      Directory? extDir;
+      try {
+        if (Platform.isAndroid) {
+          extDir = await getExternalStorageDirectory();
+        }
+      } catch (_) {}
+      final appDocDir = extDir ?? await getApplicationDocumentsDirectory();
+
+      final safeId =
+          audiobookId.replaceAll(RegExp(r'[^a-zA-Z0-9\-_.]'), '_');
+      final dir = Directory('${appDocDir.path}/downloads/$safeId');
+      final finalFile = File('${dir.path}/$fileTitle.mp3');
+      final tempFile = File('${dir.path}/.cache_$fileTitle.mp3');
+
+      return (tempFile, finalFile);
+    } catch (_) {}
+    return null;
+  }
+
+  /// Downloads the full YouTube audio in the background and saves it to disk
+  /// so future plays use the local file instead of streaming.
+  Future<void> _ensureBackgroundCache(
+    String resolvedVideoId,
+    StreamManifest manifest,
+  ) async {
+    final tag = this.tag as MediaItem?;
+    final audiobookId = tag?.extras?['audiobook_id'] as String? ?? '';
+    final cacheKey = '${audiobookId}_$resolvedVideoId';
+
+    if (_cachingIds.contains(cacheKey)) return;
+
+    final paths = await _getCachePaths();
+    if (paths == null) return;
+    final (tempFile, finalFile) = paths;
+
+    // Already cached from a previous session
+    if (await finalFile.exists()) return;
+
+    // If a temp file exists, check if it's stale (>1 hour old) or active
+    if (await tempFile.exists()) {
+      final stat = await tempFile.stat();
+      if (DateTime.now().difference(stat.modified).inHours < 1) {
+        return; // Another instance is likely still caching
+      }
+      await tempFile.delete(); // Stale temp file, start fresh
+    }
+
+    _cachingIds.add(cacheKey);
+
+    try {
+      final supportedStreams = manifest.audioOnly.sortByBitrate();
+      final audioStream = quality == 'high'
+          ? supportedStreams.lastOrNull
+          : supportedStreams.firstOrNull;
+
+      if (audioStream == null) return;
+
+      await tempFile.parent.create(recursive: true);
+      final sink = tempFile.openWrite();
+
+      AppLogger.debug(
+          'YouTubeAudioSource: starting background cache for $resolvedVideoId');
+
+      final stream = _streamClient.getAudioStream(
+        audioStream,
+        start: 0,
+        end: audioStream.size.totalBytes,
+        isThrottledOrVeryLarge: audioStream.isThrottled,
+      );
+
+      int bytesWritten = 0;
+      await for (final chunk in stream) {
+        sink.add(chunk);
+        bytesWritten += chunk.length;
+      }
+
+      await sink.flush();
+      await sink.close();
+
+      // Allow 1KB tolerance for size mismatches
+      if (bytesWritten >= audioStream.size.totalBytes - 1024) {
+        if (await finalFile.exists()) await finalFile.delete();
+        await tempFile.rename(finalFile.path);
+        AppLogger.debug(
+            'YouTubeAudioSource: cached ($bytesWritten bytes) -> ${finalFile.path}');
+      } else {
+        AppLogger.debug(
+            'YouTubeAudioSource: incomplete cache ($bytesWritten/${audioStream.size.totalBytes}), discarding');
+        await tempFile.delete();
+      }
+    } catch (e) {
+      AppLogger.debug('YouTubeAudioSource: background cache error: $e');
+      try {
+        await tempFile.delete();
+      } catch (_) {}
+    } finally {
+      _cachingIds.remove(cacheKey);
+    }
   }
 
   @override
@@ -127,6 +238,9 @@ class YouTubeAudioSource extends StreamAudioSource {
     if (audioStream == null) {
       throw Exception('No audio stream available for this video.');
     }
+
+    // Kick off background cache for future plays (fire-and-forget)
+    unawaited(_ensureBackgroundCache(resolvedVideoId, manifest));
 
     // Coerce to non-null ints that respect total size
     int s = start ?? 0;

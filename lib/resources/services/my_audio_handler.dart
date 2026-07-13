@@ -6,6 +6,7 @@ import 'package:flutter/foundation.dart';
 import 'package:audiobookflow/resources/models/audiobook.dart';
 import 'package:audiobookflow/resources/models/audiobook_file.dart';
 import 'package:audiobookflow/resources/models/history_of_audiobook.dart';
+import 'package:audiobookflow/resources/services/soundbooks/soundbooks_detail_service.dart';
 import 'package:audiobookflow/resources/services/youtube/youtube_audio_service.dart';
 import 'package:audiobookflow/resources/services/local/cover_image_service.dart';
 import 'package:audiobookflow/utils/app_logger.dart';
@@ -22,6 +23,18 @@ Uri? _artUriFrom(String? s) {
   if (s == null || s.isEmpty) return null;
   final local = asLocalPath(s);
   return local != null ? Uri.file(local) : Uri.parse(s);
+}
+
+/// Sanitizes a playback URL for the audio player.
+///
+/// Percent-encodes raw non-ASCII bytes and spaces (healing old persisted
+/// state) and returns the safe URL string. Already-ASCII URLs pass through
+/// unchanged. Local file paths (starting with `/`) are returned as-is
+/// without encoding — the caller distinguishes them via the leading `/`.
+String sanitizePlayerUrl(String rawUrl) {
+  final needsEncoding =
+      rawUrl.codeUnits.any((u) => u > 0x7F || u == 0x20);
+  return needsEncoding ? encodeTrackUrl(rawUrl) : rawUrl;
 }
 
 abstract class PlaybackEngine {
@@ -200,6 +213,11 @@ class MyAudioHandler extends BaseAudioHandler {
   bool _sessionConfigured = false;
   bool _isReinitializing = false;
   int _initGen = 0;
+
+  /// True while [initSongs] is replacing the queue. Callers (e.g.
+  /// [MiniAudioPlayer]) SHOULD skip restore-from-Hive reinit while this
+  /// is true to avoid racing with an explicit initSongs.
+  bool get isReinitializing => _isReinitializing;
 
   MyAudioHandler({
     PlaybackEngine? player,
@@ -478,9 +496,14 @@ class MyAudioHandler extends BaseAudioHandler {
           sources.add(
               YouTubeAudioSource(videoId: videoId, tag: item, quality: 'high'));
         } else if (song.url != null) {
-          final uri = song.url!.startsWith('/')
-              ? Uri.file(song.url!)
-              : Uri.parse(song.url!);
+          // Defense-in-depth: heal any raw non-ASCII / spaces in the URL
+          // before handing it to the player. Sources should already
+          // encode, but persisted state (Hive) from before the encoding
+          // fix and edge-case paths can still carry raw Cyrillic.
+          final safeUrl = sanitizePlayerUrl(song.url!);
+          final uri = safeUrl.startsWith('/')
+              ? Uri.file(safeUrl)
+              : Uri.parse(safeUrl);
 
           if ((song.startMs ?? 0) > 0 || (song.durationMs ?? 0) > 0) {
             final start = Duration(milliseconds: song.startMs ?? 0);

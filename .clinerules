@@ -1,0 +1,48 @@
+# Superpowers Skills — Cline Integration
+
+Skills live in `.superpowers/skills/<name>/SKILL.md`. Read the full SKILL.md
+when invoking a skill. Announce: "Using [skill] to [purpose]."
+
+## Bootstrap
+
+If you think there is even a 1% chance a skill might apply, you MUST invoke it
+BEFORE any response or action — including clarifying questions, exploring the
+codebase, or checking files.
+
+Skill check priority:
+- "Let's build X" → brainstorming first, then implementation.
+- "Fix this bug" → systematic-debugging first.
+- "Write tests" → test-driven-development.
+- Multi-step task with spec → writing-plans, then executing-plans.
+
+User instructions (direct requests) take precedence over skills.
+
+## Red Flags — these thoughts mean STOP
+
+| Thought | Reality |
+|---------|---------|
+| "This is just a simple question" | Questions are tasks. Check for skills. |
+| "I need more context first" | Skill check comes BEFORE clarifying questions. |
+| "Let me explore the codebase first" | Skills tell you HOW to explore. Check first. |
+| "This doesn't need a formal skill" | If a skill exists, use it. |
+| "The skill is overkill" | Simple things become complex. Use it. |
+| "I'll just do this one thing first" | Check BEFORE doing anything. |
+
+## Skill Index
+
+| Skill | Trigger |
+|-------|---------|
+| using-superpowers | Every conversation start (this file) |
+| brainstorming | Before any creative/feature work |
+| test-driven-development | Before implementing any feature or bugfix |
+| systematic-debugging | Bug, test failure, unexpected behavior |
+| writing-plans | Multi-step task with spec, before code |
+| executing-plans | Have written plan, ready to implement |
+| subagent-driven-development | Plan ready, subagents available |
+| dispatching-parallel-agents | Multiple independent tasks |
+| requesting-code-review | Before asking for review |
+| receiving-code-review | When receiving review feedback |
+| using-git-worktrees | Parallel development branches |
+| finishing-a-development-branch | Tasks complete, ready to merge |
+| verification-before-completion | Before declaring fix done |
+| writing-skills | Creating new skills |

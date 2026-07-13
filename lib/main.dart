@@ -17,6 +17,7 @@ import 'package:audiobookflow/screens/audiobook_details/bloc/audiobook_details_b
 import 'package:audiobookflow/screens/audiobook_player/audiobook_player.dart';
 import 'package:audiobookflow/screens/four_read_top/four_read_top_screen.dart';
 import 'package:audiobookflow/screens/knigavuhe_lists/knigavuhe_lists_screen.dart';
+import 'package:audiobookflow/screens/soundbooks_lists/soundbooks_lists_screen.dart';
 import 'package:audiobookflow/screens/download_audiobook/downloads_page.dart';
 import 'package:audiobookflow/screens/genre_audiobooks/genre_audiobooks.dart';
 import 'package:audiobookflow/screens/home/home.dart';
@@ -156,6 +157,7 @@ class _MyAppState extends State<MyApp> {
                         extras['isYoutubeSearch'] as bool? ?? false;
                     final isFourRead = extras['isFourRead'] as bool? ?? false;
                     final isKnigavuhe = extras['isKnigavuhe'] as bool? ?? false;
+                    final isSoundBooks = extras['isSoundBooks'] as bool? ?? false;
                     return AudiobookDetails(
                       audiobook: audiobook,
                       isDownload: isDownload,
@@ -164,6 +166,7 @@ class _MyAppState extends State<MyApp> {
                       isYoutubeSearch: isYoutubeSearch,
                       isFourRead: isFourRead,
                       isKnigavuhe: isKnigavuhe,
+                      isSoundBooks: isSoundBooks,
                     );
                   },
                 ),
@@ -181,6 +184,11 @@ class _MyAppState extends State<MyApp> {
                   path: '/knigavuhe_lists',
                   name: 'knigavuhe_lists',
                   builder: (context, state) => const KnigavuheListsScreen(),
+                ),
+                GoRoute(
+                  path: '/soundbooks_lists',
+                  name: 'soundbooks_lists',
+                  builder: (context, state) => const SoundBooksListsScreen(),
                 ),
               ],
             ),

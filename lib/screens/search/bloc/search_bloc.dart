@@ -4,6 +4,7 @@ import 'package:audiobookflow/resources/archive_api.dart';
 import 'package:audiobookflow/resources/models/audiobook.dart';
 import 'package:audiobookflow/resources/services/four_read/four_read_search_service.dart';
 import 'package:audiobookflow/resources/services/knigavuhe/knigavuhe_search_service.dart';
+import 'package:audiobookflow/resources/services/soundbooks/soundbooks_search_service.dart';
 import 'package:audiobookflow/resources/services/youtube/youtube_search_service.dart';
 import 'package:audiobookflow/utils/app_events.dart';
 import 'package:bloc/bloc.dart';
@@ -13,7 +14,7 @@ import 'package:meta/meta.dart';
 part 'search_event.dart';
 part 'search_state.dart';
 
-enum SearchSourceSelection { all, librivox, youtube, archiveOrg, fourRead, knigavuhe }
+enum SearchSourceSelection { all, librivox, youtube, archiveOrg, fourRead, knigavuhe, soundBooks }
 
 class SearchBloc extends Bloc<SearchEvent, SearchState> {
   static const int _librivoxRows = 10;
@@ -29,6 +30,7 @@ class SearchBloc extends Bloc<SearchEvent, SearchState> {
   final YoutubeSearchService _youtubeSearch = YoutubeSearchService();
   final FourReadSearchService _fourReadSearch = FourReadSearchService();
   final KnigavuheSearchService _knigavuheSearch = KnigavuheSearchService();
+  final SoundBooksSearchService _soundBooksSearch = SoundBooksSearchService();
 
   StreamSubscription<void>? _langSub;
 
@@ -112,6 +114,10 @@ class SearchBloc extends Bloc<SearchEvent, SearchState> {
         sourceSelection == SearchSourceSelection.knigavuhe ||
             (sourceSelection == SearchSourceSelection.all &&
                 _isSourceEnabled('knigavuhe'));
+    final includeSoundBooks =
+        sourceSelection == SearchSourceSelection.soundBooks ||
+            (sourceSelection == SearchSourceSelection.all &&
+                _isSourceEnabled('soundbooks'));
 
     // Build (source name, future) pairs so each source can report its own
     // completion and we can emit incremental progress to the UI.
@@ -130,6 +136,9 @@ class SearchBloc extends Bloc<SearchEvent, SearchState> {
     }
     if (includeKnigavuhe) {
       pending.add(MapEntry('Knigavuhe', _searchKnigavuhe(query, page)));
+    }
+    if (includeSoundBooks) {
+      pending.add(MapEntry('Sound-Books', _searchSoundBooks(query, page)));
     }
 
     final totalSources = pending.length;
@@ -183,22 +192,28 @@ class SearchBloc extends Bloc<SearchEvent, SearchState> {
     final knigavuheResult = includeKnigavuhe
         ? resultsByName['Knigavuhe']!
         : const _SearchBatchResult(books: []);
+    final soundBooksResult = includeSoundBooks
+        ? resultsByName['Sound-Books']!
+        : const _SearchBatchResult(books: []);
     final librivoxBooks = librivoxResult.books;
     final youtubeBooks = youtubeResult.books;
     final archiveOrgBooks = archiveOrgResult.books;
     final fourReadBooks = fourReadResult.books;
     final knigavuheBooks = knigavuheResult.books;
+    final soundBooksBooks = soundBooksResult.books;
     final hasAnyResults = librivoxBooks.isNotEmpty ||
         youtubeBooks.isNotEmpty ||
         archiveOrgBooks.isNotEmpty ||
         fourReadBooks.isNotEmpty ||
-        knigavuheBooks.isNotEmpty;
+        knigavuheBooks.isNotEmpty ||
+        soundBooksBooks.isNotEmpty;
     final allErrors = [
       if (librivoxResult.error != null) librivoxResult.error!,
       if (youtubeResult.error != null) youtubeResult.error!,
       if (archiveOrgResult.error != null) archiveOrgResult.error!,
       if (fourReadResult.error != null) fourReadResult.error!,
       if (knigavuheResult.error != null) knigavuheResult.error!,
+      if (soundBooksResult.error != null) soundBooksResult.error!,
     ];
 
     if (!hasAnyResults && allErrors.isNotEmpty) {
@@ -213,11 +228,13 @@ class SearchBloc extends Bloc<SearchEvent, SearchState> {
             archiveOrgAudiobooks: prev.archiveOrgAudiobooks,
             fourReadAudiobooks: prev.fourReadAudiobooks,
             knigavuheAudiobooks: prev.knigavuheAudiobooks,
+            soundBooksAudiobooks: prev.soundBooksAudiobooks,
             hasMoreLibrivox: prev.hasMoreLibrivox,
             hasMoreYoutube: prev.hasMoreYoutube,
             hasMoreArchiveOrg: prev.hasMoreArchiveOrg,
             hasMoreFourRead: prev.hasMoreFourRead,
             hasMoreKnigavuhe: prev.hasMoreKnigavuhe,
+            hasMoreSoundBooks: prev.hasMoreSoundBooks,
           ),
         );
       }
@@ -232,6 +249,7 @@ class SearchBloc extends Bloc<SearchEvent, SearchState> {
           archiveOrgAudiobooks: archiveOrgBooks,
           fourReadAudiobooks: fourReadBooks,
           knigavuheAudiobooks: knigavuheBooks,
+          soundBooksAudiobooks: soundBooksBooks,
           hasMoreLibrivox:
               includeLibrivox && librivoxBooks.length >= _librivoxRows,
           hasMoreYoutube:
@@ -239,6 +257,7 @@ class SearchBloc extends Bloc<SearchEvent, SearchState> {
           hasMoreArchiveOrg: includeArchiveOrg && archiveOrgBooks.length >= 20,
           hasMoreFourRead: includeFourRead && fourReadBooks.length >= 15,
           hasMoreKnigavuhe: includeKnigavuhe && knigavuheBooks.length >= 20,
+          hasMoreSoundBooks: includeSoundBooks && soundBooksBooks.length >= 10,
         ),
       );
       return;
@@ -260,6 +279,8 @@ class SearchBloc extends Bloc<SearchEvent, SearchState> {
           prev.hasMoreFourRead && includeFourRead && fourReadBooks.length >= 15;
       final nextKnigavuheHasMore =
           prev.hasMoreKnigavuhe && includeKnigavuhe && knigavuheBooks.length >= 20;
+      final nextSoundBooksHasMore =
+          prev.hasMoreSoundBooks && includeSoundBooks && soundBooksBooks.length >= 10;
       emit(
         SearchSuccess(
           librivoxAudiobooks: [
@@ -282,11 +303,16 @@ class SearchBloc extends Bloc<SearchEvent, SearchState> {
             ...prev.knigavuheAudiobooks,
             ...knigavuheBooks,
           ],
+          soundBooksAudiobooks: [
+            ...prev.soundBooksAudiobooks,
+            ...soundBooksBooks,
+          ],
           hasMoreLibrivox: nextLibrivoxHasMore,
           hasMoreYoutube: nextYoutubeHasMore,
           hasMoreArchiveOrg: nextArchiveOrgHasMore,
           hasMoreFourRead: nextFourReadHasMore,
           hasMoreKnigavuhe: nextKnigavuheHasMore,
+          hasMoreSoundBooks: nextSoundBooksHasMore,
         ),
       );
     } else {
@@ -297,6 +323,7 @@ class SearchBloc extends Bloc<SearchEvent, SearchState> {
           archiveOrgAudiobooks: archiveOrgBooks,
           fourReadAudiobooks: fourReadBooks,
           knigavuheAudiobooks: knigavuheBooks,
+          soundBooksAudiobooks: soundBooksBooks,
           hasMoreLibrivox:
               includeLibrivox && librivoxBooks.length >= _librivoxRows,
           hasMoreYoutube:
@@ -304,6 +331,7 @@ class SearchBloc extends Bloc<SearchEvent, SearchState> {
           hasMoreArchiveOrg: includeArchiveOrg && archiveOrgBooks.length >= 20,
           hasMoreFourRead: includeFourRead && fourReadBooks.length >= 15,
           hasMoreKnigavuhe: includeKnigavuhe && knigavuheBooks.length >= 20,
+          hasMoreSoundBooks: includeSoundBooks && soundBooksBooks.length >= 10,
         ),
       );
     }
@@ -389,11 +417,27 @@ class SearchBloc extends Bloc<SearchEvent, SearchState> {
     }
   }
 
+  Future<_SearchBatchResult> _searchSoundBooks(
+    String query,
+    int page,
+  ) async {
+    try {
+      final list = await _soundBooksSearch.search(
+        query,
+        page: page,
+        pageSize: 10,
+      );
+      return _SearchBatchResult(books: list);
+    } catch (e) {
+      return _SearchBatchResult(books: const [], error: e.toString());
+    }
+  }
+
   bool _isSourceEnabled(String source) {
     final box = Hive.box('settings');
     final enabled = List<String>.from(
       box.get('enabledSearchSources',
-          defaultValue: ['librivox', 'youtube', 'archiveOrg', 'fourRead', 'knigavuhe']),
+          defaultValue: ['librivox', 'youtube', 'archiveOrg', 'fourRead', 'knigavuhe', 'soundbooks']),
     );
     return enabled.contains(source);
   }

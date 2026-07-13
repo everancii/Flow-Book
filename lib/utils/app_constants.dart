@@ -7,6 +7,7 @@ class AppConstants {
   static const String youtubeDirName = 'youtube';
   static const String fourReadDirName = '4read';
   static const String knigavuheDirName = 'knigavuhe';
+  static const String soundBooksDirName = 'soundbooks';
   static const String localDirName = 'local';
 
   static const List<String> supportedAudioExtensions = [

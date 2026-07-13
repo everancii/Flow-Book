@@ -79,6 +79,7 @@ class _SettingsState extends State<Settings> {
     'archiveOrg': 'Archive.org',
     'fourRead': '4Read',
     'knigavuhe': 'Knigavuhe',
+    'soundbooks': 'Sound-Books',
   };
 
   @override

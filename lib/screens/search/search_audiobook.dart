@@ -98,7 +98,7 @@ class _SearchAudiobookState extends State<SearchAudiobook> {
     final box = Hive.box('settings');
     return List<String>.from(
       box.get('enabledSearchSources',
-          defaultValue: ['librivox', 'youtube', 'archiveOrg', 'fourRead', 'knigavuhe']),
+          defaultValue: ['librivox', 'youtube', 'archiveOrg', 'fourRead', 'knigavuhe', 'soundbooks']),
     );
   }
 
@@ -111,6 +111,7 @@ class _SearchAudiobookState extends State<SearchAudiobook> {
       SearchSourceSelection.archiveOrg: 'archiveOrg',
       SearchSourceSelection.fourRead: 'fourRead',
       SearchSourceSelection.knigavuhe: 'knigavuhe',
+      SearchSourceSelection.soundBooks: 'soundbooks',
     }[sel];
     return key == null || enabled.contains(key);
   }
@@ -298,7 +299,8 @@ class _SearchAudiobookState extends State<SearchAudiobook> {
                       state.youtubeAudiobooks.isEmpty &&
                       state.archiveOrgAudiobooks.isEmpty &&
                       state.fourReadAudiobooks.isEmpty &&
-                      state.knigavuheAudiobooks.isEmpty) {
+                      state.knigavuheAudiobooks.isEmpty &&
+                      state.soundBooksAudiobooks.isEmpty) {
                     return _NoResultsState(query: searchBloc.lastQuery ?? '');
                   }
 
@@ -409,6 +411,27 @@ class _SearchAudiobookState extends State<SearchAudiobook> {
                     );
                   }
 
+                  if (state.soundBooksAudiobooks.isNotEmpty) {
+                    slivers.add(
+                      _SectionHeader(
+                        title: 'Sound-Books',
+                        count: state.soundBooksAudiobooks.length,
+                        icon: Icons.record_voice_over_rounded,
+                        accentColor: const Color(0xFF009688),
+                      ),
+                    );
+                    slivers.add(
+                      SliverList(
+                        delegate: SliverChildBuilderDelegate(
+                          (context, index) => _SearchResultTile(
+                            audiobook: state.soundBooksAudiobooks[index],
+                          ),
+                          childCount: state.soundBooksAudiobooks.length,
+                        ),
+                      ),
+                    );
+                  }
+
                   if (isLoadingMore) {
                     slivers.add(
                       SliverToBoxAdapter(
@@ -452,6 +475,8 @@ class _SearchAudiobookState extends State<SearchAudiobook> {
         return 'Search 4Read UA...';
       case SearchSourceSelection.knigavuhe:
         return 'Search knigavuhe RU...';
+      case SearchSourceSelection.soundBooks:
+        return 'Search Sound-Books UA...';
       case SearchSourceSelection.all:
         return 'Search all sources...';
     }
@@ -468,6 +493,7 @@ class _SearchResultTile extends StatelessWidget {
   bool get _isYoutube => audiobook.origin == AppConstants.youtubeDirName;
   bool get _isFourRead => audiobook.origin == AppConstants.fourReadDirName;
   bool get _isKnigavuhe => audiobook.origin == AppConstants.knigavuheDirName;
+  bool get _isSoundBooks => audiobook.origin == AppConstants.soundBooksDirName;
   bool get _isPlaylist => _isYoutube && audiobook.id.length != 11;
 
   @override
@@ -478,7 +504,9 @@ class _SearchResultTile extends StatelessWidget {
             ? const Color(0xFFFF8A00)
             : _isKnigavuhe
                 ? const Color(0xFF9C27B0)
-                : AppColors.primaryColor;
+                : _isSoundBooks
+                    ? const Color(0xFF009688)
+                    : AppColors.primaryColor;
     final sourceLabel = _isPlaylist
         ? 'Playlist'
         : _isYoutube
@@ -487,7 +515,9 @@ class _SearchResultTile extends StatelessWidget {
                 ? '4Read'
                 : _isKnigavuhe
                     ? 'Knigavuhe'
-                    : 'LibriVox';
+                    : _isSoundBooks
+                        ? 'Sound-Books'
+                        : 'LibriVox';
 
     return Card(
       elevation: 2,
@@ -638,6 +668,7 @@ class _SearchResultTile extends StatelessWidget {
               'isLocal': false,
               'isFourRead': _isFourRead,
               'isKnigavuhe': _isKnigavuhe,
+              'isSoundBooks': _isSoundBooks,
             },
           );
         },
@@ -753,6 +784,7 @@ class _SourceChoiceChips extends StatelessWidget {
     SearchSourceSelection.archiveOrg: 'archiveOrg',
     SearchSourceSelection.fourRead: 'fourRead',
     SearchSourceSelection.knigavuhe: 'knigavuhe',
+    SearchSourceSelection.soundBooks: 'soundbooks',
   };
 
   @override
@@ -760,7 +792,7 @@ class _SourceChoiceChips extends StatelessWidget {
     final box = Hive.box('settings');
     final enabledSources = List<String>.from(
       box.get('enabledSearchSources',
-          defaultValue: ['librivox', 'youtube', 'archiveOrg', 'fourRead', 'knigavuhe']),
+          defaultValue: ['librivox', 'youtube', 'archiveOrg', 'fourRead', 'knigavuhe', 'soundbooks']),
     );
 
     final chips = <Widget>[
@@ -797,6 +829,7 @@ class _SourceChoiceChips extends StatelessWidget {
     'archiveOrg': 'Archive.org',
     'fourRead': '4Read',
     'knigavuhe': 'Knigavuhe',
+    'soundbooks': 'Sound-Books',
   };
 
   static const Map<String, IconData> _sourceIcons = {
@@ -805,6 +838,7 @@ class _SourceChoiceChips extends StatelessWidget {
     'archiveOrg': Icons.cloud_download_rounded,
     'fourRead': Icons.library_books_rounded,
     'knigavuhe': Icons.headphones_rounded,
+    'soundbooks': Icons.record_voice_over_rounded,
   };
 
   static const Map<String, Color> _sourceColors = {
@@ -813,6 +847,7 @@ class _SourceChoiceChips extends StatelessWidget {
     'archiveOrg': Color(0xFF00897B),
     'fourRead': Color(0xFFFF8A00),
     'knigavuhe': Color(0xFF9C27B0),
+    'soundbooks': Color(0xFF009688),
   };
 
   Widget _chip({
@@ -857,7 +892,7 @@ class _EmptyPrompt extends StatelessWidget {
           ),
           const SizedBox(height: 16),
           Text(
-            'Search LibriVox, YouTube, and 4Read',
+            'Search LibriVox, YouTube, 4Read, Knigavuhe & Sound-Books',
             style: GoogleFonts.ubuntu(
               fontSize: 18,
               fontWeight: FontWeight.bold,

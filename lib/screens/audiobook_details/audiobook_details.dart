@@ -31,6 +31,7 @@ class AudiobookDetails extends StatefulWidget {
   final bool isLocal;
   final bool isFourRead;
   final bool isKnigavuhe;
+  final bool isSoundBooks;
 
   const AudiobookDetails({
     super.key,
@@ -41,6 +42,7 @@ class AudiobookDetails extends StatefulWidget {
     this.isLocal = false,
     this.isFourRead = false,
     this.isKnigavuhe = false,
+    this.isSoundBooks = false,
   });
 
   @override
@@ -60,17 +62,20 @@ class _AudiobookDetailsState extends State<AudiobookDetails> {
   bool _isBufferingYouTube = false;
   double _bufferingProgress = 0.0;
   bool _bufferingListenerSetup = false;
+  bool _autoPlayTriggered = false;
 
   Future<void> _playChapter(List<AudiobookFile> files, int index) async {
     try {
-      await playingAudiobookDetailsBox.put(
-          'audiobook', widget.audiobook.toMap());
-      await playingAudiobookDetailsBox.put(
+      // Write all Hive values synchronously before any await to avoid
+      // a race where MiniAudioPlayer.didChangeDependencies reads a
+      // partially-updated box (new audiobook, old files).
+      playingAudiobookDetailsBox.put('audiobook', widget.audiobook.toMap());
+      playingAudiobookDetailsBox.put(
         'audiobookFiles',
         files.map((e) => e.toMap()).toList(),
       );
-      await playingAudiobookDetailsBox.put('index', index);
-      await playingAudiobookDetailsBox.put('position', 0);
+      playingAudiobookDetailsBox.put('index', index);
+      playingAudiobookDetailsBox.put('position', 0);
 
       await audioHandlerProvider.audioHandler
           .initSongs(files, widget.audiobook, index, 0);
@@ -83,6 +88,50 @@ class _AudiobookDetailsState extends State<AudiobookDetails> {
         const SnackBar(
             content: Text('Unable to start playback. Please try again.')),
       );
+    }
+  }
+
+  Future<void> _autoPlay(List<AudiobookFile> files) async {
+    try {
+      // Stop the previous book immediately so the user doesn't hear
+      // it while the new one is loading.
+      await audioHandlerProvider.audioHandler.stop();
+
+      playingAudiobookDetailsBox.put(
+          'audiobook', widget.audiobook.toMap());
+      playingAudiobookDetailsBox.put(
+        'audiobookFiles',
+        files.map((e) => e.toMap()).toList(),
+      );
+
+      if (historyOfAudiobook
+          .isAudiobookInHistory(widget.audiobook.id)) {
+        final historyItem = historyOfAudiobook
+            .getHistoryOfAudiobookItem(widget.audiobook.id);
+        final idx = historyItem.index.clamp(0, files.length - 1);
+        playingAudiobookDetailsBox.put('index', idx);
+        playingAudiobookDetailsBox.put('position', historyItem.position);
+        await audioHandlerProvider.audioHandler.initSongs(
+          files,
+          widget.audiobook,
+          idx,
+          historyItem.position,
+        );
+      } else {
+        playingAudiobookDetailsBox.put('index', 0);
+        playingAudiobookDetailsBox.put('position', 0);
+        await audioHandlerProvider.audioHandler.initSongs(
+          files,
+          widget.audiobook,
+          0,
+          0,
+        );
+      }
+
+      await audioHandlerProvider.audioHandler.play();
+      _weSlideController.show();
+    } catch (e) {
+      AppLogger.debug('Error auto-playing audiobook: $e');
     }
   }
 
@@ -160,6 +209,7 @@ class _AudiobookDetailsState extends State<AudiobookDetails> {
       isLocal: widget.isLocal,
       isFourRead: widget.isFourRead,
       isKnigavuhe: widget.isKnigavuhe,
+      isSoundBooks: widget.isSoundBooks,
     ));
     playingAudiobookDetailsBox = Hive.box('playing_audiobook_details_box');
     historyOfAudiobook = HistoryOfAudiobook();
@@ -343,6 +393,13 @@ class _AudiobookDetailsState extends State<AudiobookDetails> {
                     ),
                   );
                 } else if (state is AudiobookDetailsLoaded) {
+                  // Auto-play on first details load
+                  if (!_autoPlayTriggered) {
+                    _autoPlayTriggered = true;
+                    WidgetsBinding.instance.addPostFrameCallback((_) {
+                      if (mounted) _autoPlay(state.audiobookFiles);
+                    });
+                  }
                   final fourReadDesc = state.fourReadDescription?.trim() ?? '';
                   final knigavuheDesc = state.knigavuheDescription?.trim() ?? '';
                   final rawDescription = fourReadDesc.isNotEmpty
@@ -683,6 +740,7 @@ class _AudiobookDetailsState extends State<AudiobookDetails> {
                                 isLocal: widget.isLocal,
                                 isFourRead: widget.isFourRead,
                                 isKnigavuhe: widget.isKnigavuhe,
+                                isSoundBooks: widget.isSoundBooks,
                               ));
                             },
                             child: const Text('Retry'),

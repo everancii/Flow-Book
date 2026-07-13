@@ -11,6 +11,7 @@ class FetchAudiobookDetails extends AudiobookDetailsEvent {
   final bool isLocal;
   final bool isFourRead;
   final bool isKnigavuhe;
+  final bool isSoundBooks;
 
   FetchAudiobookDetails(
     this.audiobookId,
@@ -20,6 +21,7 @@ class FetchAudiobookDetails extends AudiobookDetailsEvent {
     this.isLocal = false,
     this.isFourRead = false,
     this.isKnigavuhe = false,
+    this.isSoundBooks = false,
   });
 }
 

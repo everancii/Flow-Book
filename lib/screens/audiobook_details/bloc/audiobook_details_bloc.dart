@@ -9,6 +9,7 @@ import 'package:audiobookflow/resources/archive_api.dart';
 import 'package:audiobookflow/resources/models/audiobook.dart';
 import 'package:audiobookflow/resources/models/audiobook_file.dart';
 import 'package:audiobookflow/resources/services/knigavuhe/knigavuhe_detail_service.dart';
+import 'package:audiobookflow/resources/services/soundbooks/soundbooks_detail_service.dart';
 import 'package:audiobookflow/resources/services/four_read/four_read_audiobook_notifier.dart';
 import 'package:audiobookflow/resources/services/four_read/four_read_open_guard.dart';
 import 'package:audiobookflow/resources/services/four_read/four_read_open_telemetry.dart';
@@ -32,6 +33,7 @@ class AudiobookDetailsBloc
           event.isLocal,
           event.isFourRead,
           event.isKnigavuhe,
+          event.isSoundBooks,
         ));
     on<FavouriteIconButtonClicked>(favouriteIconButtonClicked);
     on<GetFavouriteStatus>(getFavouriteStatus);
@@ -54,6 +56,7 @@ class AudiobookDetailsBloc
     bool isLocal,
     bool isFourRead,
     bool isKnigavuhe,
+    bool isSoundBooks,
   ) async {
     emit(AudiobookDetailsLoading());
     AppLogger.debug('fetching audiobook details for id: $id');
@@ -137,6 +140,26 @@ class AudiobookDetailsBloc
             }
             emit(AudiobookDetailsLoaded(r.files,
                 knigavuheDescription: r.description));
+          },
+        );
+      } else if (isSoundBooks) {
+        AppLogger.debug('fetching audiobook files from sound-books');
+        final result =
+            await SoundBooksDetailService().getAudiobookFiles(id);
+        return result.fold(
+          (l) {
+            emit(AudiobookDetailsError(l));
+            return;
+          },
+          (r) {
+            if (r.files.isEmpty) {
+              emit(AudiobookDetailsError(
+                'No audiobook files were found for this title.',
+              ));
+              return;
+            }
+            emit(AudiobookDetailsLoaded(r.files,
+                soundBooksDescription: r.description));
           },
         );
       } else {

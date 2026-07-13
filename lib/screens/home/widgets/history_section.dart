@@ -468,7 +468,9 @@ class _HistorySectionState extends State<HistorySection> {
 
                   // Seconds completed across all tracks prior to the current one.
                   double completedSecs = 0;
-                  for (int i = 0; i < item.index; i++) {
+                  final safeIndex =
+                      item.index.clamp(0, item.audiobookFiles.length);
+                  for (int i = 0; i < safeIndex; i++) {
                     completedSecs += _secondsForFile(item.audiobookFiles[i]);
                   }
 

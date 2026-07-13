@@ -11,8 +11,9 @@ final class AudiobookDetailsLoaded extends AudiobookDetailsState {
   final List<AudiobookFile> audiobookFiles;
   final String? fourReadDescription;
   final String? knigavuheDescription;
+  final String? soundBooksDescription;
 
-  AudiobookDetailsLoaded(this.audiobookFiles, {this.fourReadDescription, this.knigavuheDescription});
+  AudiobookDetailsLoaded(this.audiobookFiles, {this.fourReadDescription, this.knigavuheDescription, this.soundBooksDescription});
 }
 
 final class AudiobookDetailsError extends AudiobookDetailsState {

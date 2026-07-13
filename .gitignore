@@ -60,6 +60,7 @@ pubsec.lock
 .claude/
 .codex/
 .mimocode/
+.superpowers/
 .metadata
 openspec/
 android/key.properties

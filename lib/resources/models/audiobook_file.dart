@@ -771,13 +771,13 @@ class AudiobookFile {
       : identifier = map["identifier"],
         title = map["title"],
         name = map["name"],
-        track = map["track"],
-        size = map["size"],
-        length = map["length"],
+        track = _parseTrack(map["track"]),
+        size = _parseIntSafely(map["size"]),
+        length = _parseDoubleSafely(map["length"]),
         url = map["url"],
         highQCoverImage = map["highQCoverImage"],
-        startMs = map["startMs"],
-        durationMs = map["durationMs"] {
+        startMs = _parseIntSafely(map["startMs"]),
+        durationMs = _parseIntSafely(map["durationMs"]) {
     if (title != null && length != null && length! > 0) {
       AppLogger.debug(
           'AudiobookFile: title="$title", lengthSeconds=${length!.toStringAsFixed(0)}');
