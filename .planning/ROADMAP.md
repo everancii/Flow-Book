@@ -13,7 +13,7 @@ Fix the one source (Sound-Books) whose books don't auto-play on open. The bug li
 
 Decimal phases appear between their surrounding integers in numeric order.
 
-- [ ] **Phase 1: Diagnostic Verification + Test Infrastructure** - Confirm failure mechanism on-device; extend FakePlaybackEngine so the race is reproducible in tests
+- [x] **Phase 1: Diagnostic Verification + Test Infrastructure** - Confirm failure mechanism on-device; extend FakePlaybackEngine so the race is reproducible in tests (completed 2026-07-14)
 - [ ] **Phase 2: Subscription Lifecycle + State-Guard Cleanup** - Pure refactors: tracked subscriptions, gen-guarded finally, orphan-listener removal (no behavior change)
 - [ ] **Phase 3: Ready-Before-Play Fix** - Restructure initSongs to await ready before play(); bounded timeout + error surfacing (THE fix)
 - [ ] **Phase 4: Call-Site Consistency + Cross-Source Verification** - Big play button 2-line fix + manual smoke across all 5 sources + lock invariants in tests
@@ -32,7 +32,7 @@ Decimal phases appear between their surrounding integers in numeric order.
   2. A developer opening a Sound-Books book on a real device with temporary diagnostic logs sees the exact `processingState` path, whether `setAudioSources` threw, and whether `audioSession.setActive(true)` succeeded — confirming or refuting the "play() dropped during buffering" hypothesis before the fix is written.
   3. Probe-duration logs across 3+ Sound-Books URLs confirm whether the 10s timeout default is appropriate (neither too short for slow networks nor too long for dead URLs).
 
-**Plans**: 1/2 plans executed
+**Plans**: 2/2 plans complete
 
 Plans:
 **Wave 1**
@@ -41,7 +41,7 @@ Plans:
 
 **Wave 2** *(blocked on Wave 1 completion)*
 
-- [ ] 01-02-PLAN.md — On-device Sound-Books diagnostic verification (human checkpoint — confirms failure mechanism + probe-duration data)
+- [x] 01-02-PLAN.md — On-device Sound-Books diagnostic verification (human checkpoint — confirms failure mechanism + probe-duration data)
 
 ### Phase 2: Subscription Lifecycle + State-Guard Cleanup
 
@@ -108,7 +108,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Diagnostic Verification + Test Infrastructure | 1/2 | In Progress|  |
+| 1. Diagnostic Verification + Test Infrastructure | 2/2 | Complete   | 2026-07-14 |
 | 2. Subscription Lifecycle + State-Guard Cleanup | 0/1 | Not started | - |
 | 3. Ready-Before-Play Fix | 0/1 | Not started | - |
 | 4. Call-Site Consistency + Cross-Source Verification | 0/1 | Not started | - |

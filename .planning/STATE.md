@@ -6,15 +6,15 @@ current_phase: 01
 current_phase_name: diagnostic-verification-test-infrastructure
 status: executing
 stopped_at: Completed 01-01-PLAN.md
-last_updated: "2026-07-14T12:21:27.159Z"
+last_updated: "2026-07-14T12:41:13.896Z"
 last_activity: 2026-07-14
-last_activity_desc: Phase 01 execution started
+last_activity_desc: Completed 01-01-PLAN.md (diagnostic + test infra)
 progress:
   total_phases: 4
-  completed_phases: 0
+  completed_phases: 1
   total_plans: 2
-  completed_plans: 1
-  percent: 0
+  completed_plans: 2
+  percent: 25
 ---
 
 # Project State
@@ -56,6 +56,7 @@ Progress: [█████░░░░░] 50%
 
 *Updated after each plan completion*
 | Phase 01 P01 | 3 min | 2 tasks | 2 files |
+| Phase 01 P02 | 12 | - tasks | - files |
 
 ## Accumulated Context
 
@@ -69,6 +70,8 @@ Recent decisions affecting current work:
 - [Roadmap]: Phase 2 preconditions before Phase 3 — existing races would widen under the new await
 - [Phase 01]: Used skip: parameter instead of @Skip annotation before test() — @Skip is invalid Dart before a call expression; preserved literal @Skip string in comment for acceptance grep — 01-01: @Skip annotation invalid before test() call — used skip: parameter, kept literal in comment
 - [Phase 01]: Did NOT fix 2 pre-existing chapter-switching-metadata test failures — verified pre-existing via git stash on clean baseline; out of scope per deviation rule; logged to deferred-items.md — 01-01: pre-existing failures out of scope — would mask future regressions but unrelated to Sound-Books race
+- [Phase ?]: macOS diagnostic: race confirmed (play during buffering 4/5 books), audio plays on macOS, audioSession.setActive reversion unconfirmed (Android-specific)
+- [Phase ?]: Phase 3 fix layer: ready-before-play await correct — eliminates race on all platforms
 
 ### Pending Todos
 
