@@ -63,25 +63,25 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| PLAY-01 | Phase ? | Pending |
-| PLAY-02 | Phase ? | Pending |
-| PLAY-03 | Phase ? | Pending |
-| PLAY-04 | Phase ? | Pending |
-| PLAY-05 | Phase ? | Pending |
-| PLAY-06 | Phase ? | Pending |
-| PLAY-07 | Phase ? | Pending |
-| PLAY-08 | Phase ? | Pending |
-| PLAY-09 | Phase ? | Pending |
-| ERR-01 | Phase ? | Pending |
-| ERR-02 | Phase ? | Pending |
-| TEST-01 | Phase ? | Pending |
-| TEST-02 | Phase ? | Pending |
-| TEST-03 | Phase ? | Pending |
+| PLAY-01 | Phase 3 | Pending |
+| PLAY-02 | Phase 3 | Pending |
+| PLAY-03 | Phase 4 | Pending |
+| PLAY-04 | Phase 3 | Pending |
+| PLAY-05 | Phase 3 | Pending |
+| PLAY-06 | Phase 3 | Pending |
+| PLAY-07 | Phase 2 | Pending |
+| PLAY-08 | Phase 2 | Pending |
+| PLAY-09 | Phase 2 | Pending |
+| ERR-01 | Phase 3 | Pending |
+| ERR-02 | Phase 3 | Pending |
+| TEST-01 | Phase 1 | Pending |
+| TEST-02 | Phase 4 | Pending |
+| TEST-03 | Phase 4 | Pending |
 
 **Coverage:**
 - v1 requirements: 14 total
-- Mapped to phases: 0
-- Unmapped: 14 ⚠️
+- Mapped to phases: 14 ✓
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-07-14*
