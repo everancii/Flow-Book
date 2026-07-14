@@ -32,12 +32,12 @@ Decimal phases appear between their surrounding integers in numeric order.
   2. A developer opening a Sound-Books book on a real device with temporary diagnostic logs sees the exact `processingState` path, whether `setAudioSources` threw, and whether `audioSession.setActive(true)` succeeded — confirming or refuting the "play() dropped during buffering" hypothesis before the fix is written.
   3. Probe-duration logs across 3+ Sound-Books URLs confirm whether the 10s timeout default is appropriate (neither too short for slow networks nor too long for dead URLs).
 
-**Plans**: 2 plans
+**Plans**: 1/2 plans executed
 
 Plans:
 **Wave 1**
 
-- [ ] 01-01-PLAN.md — Test infrastructure (loading→ready FakePlaybackEngine simulation + race-detector test) + [DIAG] diagnostic logs in initSongs
+- [x] 01-01-PLAN.md — Test infrastructure (loading→ready FakePlaybackEngine simulation + race-detector test) + [DIAG] diagnostic logs in initSongs
 
 **Wave 2** *(blocked on Wave 1 completion)*
 
@@ -108,7 +108,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Diagnostic Verification + Test Infrastructure | 0/2 | Not started | - |
+| 1. Diagnostic Verification + Test Infrastructure | 1/2 | In Progress|  |
 | 2. Subscription Lifecycle + State-Guard Cleanup | 0/1 | Not started | - |
 | 3. Ready-Before-Play Fix | 0/1 | Not started | - |
 | 4. Call-Site Consistency + Cross-Source Verification | 0/1 | Not started | - |

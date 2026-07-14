@@ -29,7 +29,7 @@ Requirements for this milestone. Each maps to roadmap phases.
 
 ### Testability
 
-- [ ] **TEST-01**: `FakePlaybackEngine` is extended to simulate a `loading → ready` `ProcessingState` transition (precursor — the fix is untestable without it, since the fake currently always reports `ready`)
+- [x] **TEST-01**: `FakePlaybackEngine` is extended to simulate a `loading → ready` `ProcessingState` transition (precursor — the fix is untestable without it, since the fake currently always reports `ready`)
 - [ ] **TEST-02**: `playback_trust_test.dart` (520 lines) stays green — all existing assertions preserved
 - [ ] **TEST-03**: New test cases cover: ready-before-play ordering, loading-state wait, gen-discard during wait, timeout fallback, tracked-sub cancellation, no orphan listeners
 
@@ -74,11 +74,12 @@ Which phases cover which requirements. Updated during roadmap creation.
 | PLAY-09 | Phase 2 | Pending |
 | ERR-01 | Phase 3 | Pending |
 | ERR-02 | Phase 3 | Pending |
-| TEST-01 | Phase 1 | Pending |
+| TEST-01 | Phase 1 | Complete |
 | TEST-02 | Phase 4 | Pending |
 | TEST-03 | Phase 4 | Pending |
 
 **Coverage:**
+
 - v1 requirements: 14 total
 - Mapped to phases: 14 ✓
 - Unmapped: 0
