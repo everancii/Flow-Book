@@ -28,10 +28,11 @@ Decimal phases appear between their surrounding integers in numeric order.
   1. A developer running `flutter test` can configure `FakePlaybackEngine` to emit a `loading → ready` `ProcessingState` transition, and observe the race condition in test output (a test that fails today and passes after the fix can be written).
   2. A developer opening a Sound-Books book on a real device with temporary diagnostic logs sees the exact `processingState` path, whether `setAudioSources` threw, and whether `audioSession.setActive(true)` succeeded — confirming or refuting the "play() dropped during buffering" hypothesis before the fix is written.
   3. Probe-duration logs across 3+ Sound-Books URLs confirm whether the 10s timeout default is appropriate (neither too short for slow networks nor too long for dead URLs).
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
-- [ ] 01-01: TBD
+- [ ] 01-01-PLAN.md — Test infrastructure (loading→ready FakePlaybackEngine simulation + race-detector test) + [DIAG] diagnostic logs in initSongs
+- [ ] 01-02-PLAN.md — On-device Sound-Books diagnostic verification (human checkpoint — confirms failure mechanism + probe-duration data)
 
 ### Phase 2: Subscription Lifecycle + State-Guard Cleanup
 **Goal**: Eliminate the existing subscription leaks and `_isReinitializing`-clobber race as pure refactors (no user-visible behavior change) so the Phase 3 await doesn't widen existing races.
@@ -86,7 +87,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Diagnostic Verification + Test Infrastructure | 0/1 | Not started | - |
+| 1. Diagnostic Verification + Test Infrastructure | 0/2 | Not started | - |
 | 2. Subscription Lifecycle + State-Guard Cleanup | 0/1 | Not started | - |
 | 3. Ready-Before-Play Fix | 0/1 | Not started | - |
 | 4. Call-Site Consistency + Cross-Source Verification | 0/1 | Not started | - |
