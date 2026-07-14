@@ -289,6 +289,74 @@ void main() {
       expect(history.index, 1);
       expect(history.position, 42000);
     });
+
+    test(
+        'initSongs fires play() unconditionally even when processingState stays loading',
+        () async {
+      // Simulates Sound-Books: processingState stuck at loading (duration probe
+      // in-flight). Proves (a) the fake accepts a loading configuration — the
+      // infrastructure proof that loading→ready simulation is configurable — and
+      // (b) play() fires unconditionally regardless of processingState (the
+      // current bug Phase 3 will fix). PASSES today; WILL FAIL after the Phase 3
+      // ready-before-play fix (play deferred until ready → playCount stays 0 when
+      // ready never arrives). Phase 3 must update this test to emit ready on the
+      // stream once the listener re-fire is removed.
+      final fake = FakePlaybackEngine();
+      fake.processingState = ProcessingState.loading;
+      final handler = MyAudioHandler(
+        player: fake,
+        configureAudioSession: false,
+      );
+
+      await handler.initSongs(
+        _sampleFiles(),
+        _sampleAudiobook(),
+        0,
+        0,
+        playImmediately: true,
+      );
+
+      expect(fake.playCount, 1);
+      expect(fake.setAudioSourcesCalls, hasLength(1));
+    });
+
+    // Skipped until Phase 3 implements ready-before-play.
+    // @Skip('await Phase 3 ready-before-play fix')
+    // (annotation form is not valid before a test() call in Dart — annotations
+    // apply to declarations, not call expressions; using the `skip:` parameter
+    // below instead, which is the flutter_test API for skipping a test.)
+    // Remove this skip after Phase 3 implements ready-before-play.
+    // This test verifies the race is gone.
+    test(
+        'play() does not fire before processingState reaches ready (race detector)',
+        () async {
+      final fake = FakePlaybackEngine();
+      fake.processingState = ProcessingState.loading;
+      final handler = MyAudioHandler(
+        player: fake,
+        configureAudioSession: false,
+      );
+
+      final initFuture = handler.initSongs(
+        _sampleFiles(),
+        _sampleAudiobook(),
+        0,
+        0,
+        playImmediately: true,
+      );
+
+      await Future<void>.delayed(const Duration(milliseconds: 10));
+
+      expect(fake.playCount, 0,
+          reason: 'play() must not fire before processingState reaches ready');
+
+      fake.processingState = ProcessingState.ready;
+      fake.processingStates.add(ProcessingState.ready);
+
+      await initFuture;
+
+      expect(fake.playCount, 1);
+    }, skip: 'await Phase 3 ready-before-play fix');
   });
 }
 
