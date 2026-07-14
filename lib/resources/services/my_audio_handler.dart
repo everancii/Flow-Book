@@ -537,14 +537,31 @@ class MyAudioHandler extends BaseAudioHandler {
 
       final currentIsYT = _isIndexYouTube(safeIndex);
 
-      await _player.setAudioSources(
-        _audioSources!,
-        initialIndex: sources.isEmpty ? 0 : safeIndex,
-        initialPosition: currentIsYT
-            ? Duration.zero
-            : Duration(milliseconds: positionInMilliseconds),
-        preload: playImmediately,
-      );
+      // CHECKPOINT 1 — before setAudioSources. Temporary diagnostic
+      // for Phase 1 Sound-Books auto-play investigation. Remove in Phase 3.
+      AppLogger.debug('[DIAG] initSongs[gen=$myGen,active=${myGen == _initGen}]: '
+          'before setAudioSources, processingState=${_player.processingState}, '
+          'playing=${_player.playing}');
+
+      // CHECKPOINT 2 — wrap setAudioSources in try/catch that logs
+      // then rethrows (preserves propagation to _autoPlay catch at
+      // audiobook_details.dart:133). Observation only — no behavior change.
+      try {
+        await _player.setAudioSources(
+          _audioSources!,
+          initialIndex: sources.isEmpty ? 0 : safeIndex,
+          initialPosition: currentIsYT
+              ? Duration.zero
+              : Duration(milliseconds: positionInMilliseconds),
+          preload: playImmediately,
+        );
+        AppLogger.debug('[DIAG] initSongs[gen=$myGen,active=${myGen == _initGen}]: '
+            'setAudioSources OK, processingState=${_player.processingState}');
+      } catch (e) {
+        AppLogger.debug('[DIAG] initSongs[gen=$myGen,active=${myGen == _initGen}]: '
+            'setAudioSources THREW: $e, processingState=${_player.processingState}');
+        rethrow; // preserve existing exception propagation — DO NOT swallow
+      }
 
       if (myGen != _initGen) return;
 
@@ -563,6 +580,23 @@ class MyAudioHandler extends BaseAudioHandler {
         AppLogger.debug(
             'initSongs: calling _player.play(), state=${_player.processingState}');
         _player.play();
+
+        // CHECKPOINT 4 — immediately after play(). Temporary
+        // diagnostic for Phase 1 Sound-Books auto-play investigation.
+        AppLogger.debug('[DIAG] initSongs[gen=$myGen,active=${myGen == _initGen}]: '
+            'after play(), processingState=${_player.processingState}, '
+            'playing=${_player.playing}');
+
+        // CHECKPOINT 5 — 500ms after play(), detect playing reversion
+        // (audioSession.setActive failure per fork lines 1106-1127).
+        // Gen-guarded so stale-init logs are suppressed.
+        Future.delayed(const Duration(milliseconds: 500), () {
+          if (myGen != _initGen) return; // stale init — don't log
+          AppLogger.debug('[DIAG] initSongs[gen=$myGen,active=${myGen == _initGen}]: '
+              '500ms after play(), processingState=${_player.processingState}, '
+              'playing=${_player.playing}'
+              '${_player.playing ? '' : ' <- audioSession.setActive may have failed'}');
+        });
 
         // Listen for processing state changes to re-trigger play if we enter buffering
         DateTime? bufferingStarted;
