@@ -481,27 +481,27 @@ try {
 | A3 | Sound-Books probe URLs are stable enough for 3+ device tests during Phase 1 | Open Questions | URLs may change or go offline — developer should collect fresh URLs at test time |
 | A4 | The fake's broadcast `StreamController` (not BehaviorSubject) is sufficient for Phase 3's fix if Pattern 2 is used | Common Pitfalls (Pitfall 1) | If Phase 3 uses `firstWhere` directly, tests hang — must upgrade fake to BehaviorSubject |
 
-## Open Questions
+## Open Questions (RESOLVED)
 
 1. **Which ready-wait approach will Phase 3 use?**
    - What we know: ARCHITECTURE.md Pattern 2 (field-check-first + Completer/listen) works with the existing fake. STACK.md recommends `firstWhere(ready).timeout(10s)` which requires BehaviorSubject.
    - What's unclear: The planner hasn't picked one yet.
-   - Recommendation: Phase 1 should write tests that work with BOTH approaches — use field-check-first in the test's assertions (check `playCount` at specific timing points, not stream semantics). If Phase 3 picks `firstWhere`, upgrade the fake to BehaviorSubject at that time.
+   - RESOLVED — Recommendation: Phase 1 should write tests that work with BOTH approaches — use field-check-first in the test's assertions (check `playCount` at specific timing points, not stream semantics). If Phase 3 picks `firstWhere`, upgrade the fake to BehaviorSubject at that time.
 
 2. **Sound-Books probe-duration distribution**
    - What we know: Sound-Books m3u files return `length: 0` (soundbooks_detail_service.dart:253), forcing just_audio to network-probe the MP3 for duration. The 10s timeout is a reasonable default.
    - What's unclear: Actual probe durations on real networks (WiFi, cellular, slow CDN).
-   - Recommendation: Phase 1 device testing collects 3+ probe-duration data points from `[DIAG]` logs. If all probes complete <2s, 10s is generous. If any probe takes >5s, consider increasing to 15s.
+   - RESOLVED — Recommendation: Phase 1 device testing collects 3+ probe-duration data points from `[DIAG]` logs. If all probes complete <2s, 10s is generous. If any probe takes >5s, consider increasing to 15s.
 
 3. **Does `audioSession.setActive(true)` actually fail for Sound-Books?**
    - What we know: Fork `play()` at line 1106 awaits `audioSession.setActive(true)`. If it fails, `playing` reverts to `false` (line 1127). No play request sent.
    - What's unclear: Whether this is the actual failure mechanism or just a theoretical possibility.
-   - Recommendation: Checkpoint 5 (500ms delayed log) checks `playing`. If `playing == false` at 500ms, `setActive` failed — this refutes the "dropped during buffering" hypothesis and points to audio-session activation failure.
+   - RESOLVED — Recommendation: Checkpoint 5 (500ms delayed log) checks `playing`. If `playing == false` at 500ms, `setActive` failed — this refutes the "dropped during buffering" hypothesis and points to audio-session activation failure.
 
 4. **No CONTEXT.md exists for this phase — should discuss-phase have been run?**
    - What we know: No CONTEXT.md in `.planning/phases/01-diagnostic-verification-test-infrastructure/`. The phase was created from the roadmap directly.
    - What's unclear: Whether the user intended to skip discuss-phase or it was omitted.
-   - Recommendation: Proceed with research — the phase description + success criteria are clear enough. The planner has sufficient context from the project-level research docs.
+   - RESOLVED — Recommendation: Proceed with research — the phase description + success criteria are clear enough. The planner has sufficient context from the project-level research docs.
 
 ## Environment Availability
 
