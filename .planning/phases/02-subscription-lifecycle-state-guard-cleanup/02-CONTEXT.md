@@ -22,7 +22,7 @@ Three requirements (PLAY-07, PLAY-08, PLAY-09):
 
 ### Gen-Guard on Finally (PLAY-07)
 - **D-01:** Guard the finally block with: `finally { if (myGen == _initGen) { _isReinitializing = false; } }`. Only the active generation clears the flag. A stale init (superseded by a newer `++_initGen`) skips the clear, so it cannot clobber the newer init's flag.
-- **D-02:** No change to the existing early-return points (lines 526, 566, 656). They already guard with `if (myGen != _initGen) return;`. Combined with the guarded finally: stale init returns early → finally sees `myGen != _initGen` → skips the clear. The newer init's finally will clear when IT completes. Correct as-is.
+- **D-02 [informational]:** No change to the existing early-return points (lines 526, 566, 656). They already guard with `if (myGen != _initGen) return;`. Combined with the guarded finally: stale init returns early → finally sees `myGen != _initGen` → skips the clear. The newer init's finally will clear when IT completes. Correct as-is.
 
 ### Tracked Subscription Design (PLAY-08)
 - **D-03:** Introduce a single field `StreamSubscription? _initSettleSub;` (alongside the existing `_coverSub`, `_eventSub` etc. at lines 240–254). At line 603, replace `final sub = _player.processingStateStream.listen(...)` with `_initSettleSub?.cancel(); _initSettleSub = _player.processingStateStream.listen(...)`.
