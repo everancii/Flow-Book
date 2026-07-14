@@ -239,6 +239,10 @@ class MyAudioHandler extends BaseAudioHandler {
 
   StreamSubscription<String>? _coverSub;
 
+  // Tracked processing-state listener for initSongs — cancelled at re-entry,
+  // stop(), and in the gen-guarded finally block so it never stacks or leaks.
+  StreamSubscription<ProcessingState>? _initSettleSub;
+
   // Write barrier + context about the current audiobook
   bool _canPersistProgress = false;
   String? _activeAudiobookId;
@@ -422,6 +426,7 @@ class MyAudioHandler extends BaseAudioHandler {
   }) async {
     _isReinitializing = true;
     final myGen = ++_initGen;
+    _initSettleSub?.cancel();
 
     try {
       await _ensureAudioSession();
@@ -600,7 +605,8 @@ class MyAudioHandler extends BaseAudioHandler {
 
         // Listen for processing state changes to re-trigger play if we enter buffering
         DateTime? bufferingStarted;
-        final sub = _player.processingStateStream.listen((state) {
+        _initSettleSub?.cancel();
+        _initSettleSub = _player.processingStateStream.listen((state) {
           AppLogger.debug('initSongs: processingState=$state');
 
           if (state == ProcessingState.ready) {
@@ -637,14 +643,7 @@ class MyAudioHandler extends BaseAudioHandler {
             }
           }
         });
-
-        // Timeout to cancel the listener
-        Future.delayed(const Duration(seconds: 60), () => sub.cancel());
       }
-
-      _player.processingStateStream.listen((state) {
-        AppLogger.debug('initSongs: player processingState=$state');
-      });
 
       await _waitForStartToSettle(
         safeIndex,
@@ -671,7 +670,14 @@ class MyAudioHandler extends BaseAudioHandler {
 
       _broadcastState(_player.playbackEvent);
     } finally {
-      _isReinitializing = false;
+      // D-01: Only the active gen clears the flag — a stale init (superseded
+      // by a newer ++_initGen) must not clobber the newer init's flag.
+      if (myGen == _initGen) {
+        _isReinitializing = false;
+      } else {
+        // Stale init was superseded — cancel its abandoned settle listener.
+        _initSettleSub?.cancel();
+      }
     }
   }
 
@@ -935,6 +941,7 @@ class MyAudioHandler extends BaseAudioHandler {
   @override
   Future<void> stop() async {
     _positionUpdateTimer?.cancel();
+    _initSettleSub?.cancel();
     await _player.stop();
     _coverSub?.cancel();
     _broadcastState(_player.playbackEvent);

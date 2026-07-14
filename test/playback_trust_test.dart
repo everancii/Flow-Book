@@ -357,6 +357,111 @@ void main() {
 
       expect(fake.playCount, 1);
     }, skip: 'await Phase 3 ready-before-play fix');
+
+    // ── Phase 2: Subscription Lifecycle + State-Guard refactor tests ──
+
+    test(
+        'stale init finally does not clobber newer init _isReinitializing flag',
+        () async {
+      // D-01: Gen-guarded finally — a stale init's finally must NOT clear
+      // _isReinitializing when a newer init is active.
+      final fake = FakePlaybackEngine();
+      final handler = MyAudioHandler(
+        player: fake,
+        configureAudioSession: false,
+      );
+
+      // First init completes normally.
+      await handler.initSongs(
+        _sampleFiles(),
+        _sampleAudiobook(),
+        0,
+        0,
+        playImmediately: false,
+      );
+      expect(handler.isReinitializing, isFalse,
+          reason: 'Flag should be false after initSongs completes');
+
+      // Second init (simulates rapid book switch A→B) — also completes.
+      await handler.initSongs(
+        _sampleFiles(),
+        _sampleAudiobook(),
+        0,
+        0,
+        playImmediately: false,
+      );
+      expect(handler.isReinitializing, isFalse,
+          reason: 'Flag should be false after second initSongs completes. '
+              'If the stale gen-A finally clobbered gen-B flag, this would be true.');
+    });
+
+    test('initSongs cancels previous processingStateStream listener on re-entry',
+        () async {
+      // D-03/D-05: Tracked _initSettleSub — re-entry cancels the previous
+      // listener instead of stacking. After two initSongs calls, exactly ONE
+      // listener should be active, not two.
+      final fake = FakePlaybackEngine();
+      final handler = MyAudioHandler(
+        player: fake,
+        configureAudioSession: false,
+      );
+
+      // First init with playImmediately so the settle listener is attached.
+      await handler.initSongs(
+        _sampleFiles(),
+        _sampleAudiobook(),
+        0,
+        0,
+        playImmediately: true,
+      );
+      expect(fake.processingStates.hasListener, isTrue,
+          reason: 'Settle listener should be active after initSongs');
+
+      // Second init — should cancel the first listener and attach a new one.
+      await handler.initSongs(
+        _sampleFiles(),
+        _sampleAudiobook(),
+        0,
+        0,
+        playImmediately: true,
+      );
+      expect(fake.processingStates.hasListener, isTrue,
+          reason: 'One listener should still be active (the new one)');
+
+      // Third init — still exactly one listener, not three.
+      await handler.initSongs(
+        _sampleFiles(),
+        _sampleAudiobook(),
+        0,
+        0,
+        playImmediately: true,
+      );
+      expect(fake.processingStates.hasListener, isTrue,
+          reason: 'Still exactly one listener after three initSongs calls');
+    });
+
+    test('stop() cancels all processingStateStream listeners', () async {
+      // D-05.2: stop() cancels _initSettleSub — full teardown.
+      final fake = FakePlaybackEngine();
+      final handler = MyAudioHandler(
+        player: fake,
+        configureAudioSession: false,
+      );
+
+      await handler.initSongs(
+        _sampleFiles(),
+        _sampleAudiobook(),
+        0,
+        0,
+        playImmediately: true,
+      );
+      expect(fake.processingStates.hasListener, isTrue,
+          reason: 'Listener active after initSongs');
+
+      await handler.stop();
+      expect(fake.processingStates.hasListener, isFalse,
+          reason: 'All listeners cancelled after stop()');
+    });
   });
 }
 
