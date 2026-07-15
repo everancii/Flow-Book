@@ -239,10 +239,6 @@ class MyAudioHandler extends BaseAudioHandler {
 
   StreamSubscription<String>? _coverSub;
 
-  // Tracked processing-state listener for initSongs — cancelled at re-entry,
-  // stop(), and in the gen-guarded finally block so it never stacks or leaks.
-  StreamSubscription<ProcessingState>? _initSettleSub;
-
   // Write barrier + context about the current audiobook
   bool _canPersistProgress = false;
   String? _activeAudiobookId;
@@ -250,6 +246,7 @@ class MyAudioHandler extends BaseAudioHandler {
   // Debounce MRU/position writes so UIs don’t “flap”
   DateTime _lastPersistAt = DateTime.fromMillisecondsSinceEpoch(0);
   static const _persistInterval = Duration(seconds: 12);
+  static const _readyTimeout = Duration(seconds: 10);
 
   // Subscriptions to keep PlaybackState in sync
   StreamSubscription<PlaybackEvent>? _eventSub;
@@ -426,7 +423,6 @@ class MyAudioHandler extends BaseAudioHandler {
   }) async {
     _isReinitializing = true;
     final myGen = ++_initGen;
-    _initSettleSub?.cancel();
 
     try {
       await _ensureAudioSession();
@@ -542,15 +538,8 @@ class MyAudioHandler extends BaseAudioHandler {
 
       final currentIsYT = _isIndexYouTube(safeIndex);
 
-      // CHECKPOINT 1 — before setAudioSources. Temporary diagnostic
-      // for Phase 1 Sound-Books auto-play investigation. Remove in Phase 3.
-      AppLogger.debug('[DIAG] initSongs[gen=$myGen,active=${myGen == _initGen}]: '
-          'before setAudioSources, processingState=${_player.processingState}, '
-          'playing=${_player.playing}');
-
-      // CHECKPOINT 2 — wrap setAudioSources in try/catch that logs
-      // then rethrows (preserves propagation to _autoPlay catch at
-      // audiobook_details.dart:133). Observation only — no behavior change.
+      // wrap setAudioSources in try/catch that logs then rethrows
+      // so the caller (audiobook_details) catches and shows a SnackBar.
       try {
         await _player.setAudioSources(
           _audioSources!,
@@ -560,89 +549,35 @@ class MyAudioHandler extends BaseAudioHandler {
               : Duration(milliseconds: positionInMilliseconds),
           preload: playImmediately,
         );
-        AppLogger.debug('[DIAG] initSongs[gen=$myGen,active=${myGen == _initGen}]: '
-            'setAudioSources OK, processingState=${_player.processingState}');
       } catch (e) {
-        AppLogger.debug('[DIAG] initSongs[gen=$myGen,active=${myGen == _initGen}]: '
-            'setAudioSources THREW: $e, processingState=${_player.processingState}');
-        rethrow; // preserve existing exception propagation — DO NOT swallow
+        AppLogger.debug('initSongs: setAudioSources failed: $e');
+        rethrow;
       }
 
       if (myGen != _initGen) return;
 
-      if (currentIsYT && positionInMilliseconds > 0) {
-        if (playImmediately) {
-          await _waitForProcessingReady(timeout: const Duration(seconds: 5));
-        }
-        await _player.seek(Duration(milliseconds: positionInMilliseconds),
-            index: safeIndex);
-      } else {
-        await _player.seek(Duration(milliseconds: positionInMilliseconds),
-            index: safeIndex);
-      }
+      await _player.seek(Duration(milliseconds: positionInMilliseconds),
+          index: safeIndex);
 
       if (playImmediately) {
-        AppLogger.debug(
-            'initSongs: calling _player.play(), state=${_player.processingState}');
+        // D-01: Await ProcessingState.ready before play(). BehaviorSubject
+        // replays the last value, so already-ready sources (LibriVox, YouTube,
+        // knigavuhe, 4read) complete synchronously — zero added latency.
+        // Sound-Books (loading during duration probe) waits until ready or 10s.
+        try {
+          await _player.processingStateStream
+              .firstWhere((s) => s == ProcessingState.ready)
+              .timeout(_readyTimeout);
+        } on TimeoutException {
+          AppLogger.error(
+              'initSongs: timed out waiting for ProcessingState.ready after ${_readyTimeout.inSeconds}s');
+          rethrow;
+        }
+
+        // D-02: Stale init — a newer initSongs may have started during the await.
+        if (myGen != _initGen) return;
+
         _player.play();
-
-        // CHECKPOINT 4 — immediately after play(). Temporary
-        // diagnostic for Phase 1 Sound-Books auto-play investigation.
-        AppLogger.debug('[DIAG] initSongs[gen=$myGen,active=${myGen == _initGen}]: '
-            'after play(), processingState=${_player.processingState}, '
-            'playing=${_player.playing}');
-
-        // CHECKPOINT 5 — 500ms after play(), detect playing reversion
-        // (audioSession.setActive failure per fork lines 1106-1127).
-        // Gen-guarded so stale-init logs are suppressed.
-        Future.delayed(const Duration(milliseconds: 500), () {
-          if (myGen != _initGen) return; // stale init — don't log
-          AppLogger.debug('[DIAG] initSongs[gen=$myGen,active=${myGen == _initGen}]: '
-              '500ms after play(), processingState=${_player.processingState}, '
-              'playing=${_player.playing}'
-              '${_player.playing ? '' : ' <- audioSession.setActive may have failed'}');
-        });
-
-        // Listen for processing state changes to re-trigger play if we enter buffering
-        DateTime? bufferingStarted;
-        _initSettleSub?.cancel();
-        _initSettleSub = _player.processingStateStream.listen((state) {
-          AppLogger.debug('initSongs: processingState=$state');
-
-          if (state == ProcessingState.ready) {
-            AppLogger.debug('initSongs: player ready, ensuring play');
-            bufferingStarted = null;
-            _player.play();
-          } else if (state == ProcessingState.buffering) {
-            // Track when buffering started
-            bufferingStarted ??= DateTime.now();
-          } else if (state == ProcessingState.idle && _player.playing) {
-            // If player goes idle while supposed to be playing, try to recover
-            AppLogger.debug('initSongs: player went idle, attempting recovery');
-            Future.delayed(const Duration(milliseconds: 500), () {
-              if (_player.processingState == ProcessingState.idle) {
-                _player.play();
-              }
-            });
-          }
-
-          // If stuck in buffering for more than 30 seconds, log and try to recover
-          if (state == ProcessingState.buffering && bufferingStarted != null) {
-            final stuckDuration = DateTime.now().difference(bufferingStarted!);
-            if (stuckDuration > const Duration(seconds: 30)) {
-              AppLogger.error(
-                  'initSongs: stuck in buffering for ${stuckDuration.inSeconds}s, attempting skip');
-              bufferingStarted = null;
-              // Try to skip to next track
-              Future.delayed(const Duration(milliseconds: 100), () {
-                try {
-                  _player.seekToNext();
-                  _player.play();
-                } catch (_) {}
-              });
-            }
-          }
-        });
       }
 
       await _waitForStartToSettle(
@@ -670,13 +605,10 @@ class MyAudioHandler extends BaseAudioHandler {
 
       _broadcastState(_player.playbackEvent);
     } finally {
-      // D-01: Only the active gen clears the flag — a stale init (superseded
+      // Only the active gen clears the flag — a stale init (superseded
       // by a newer ++_initGen) must not clobber the newer init's flag.
       if (myGen == _initGen) {
         _isReinitializing = false;
-      } else {
-        // Stale init was superseded — cancel its abandoned settle listener.
-        _initSettleSub?.cancel();
       }
     }
   }
@@ -685,15 +617,6 @@ class MyAudioHandler extends BaseAudioHandler {
     final children = _audioSources;
     if (children == null || index < 0 || index >= children.length) return false;
     return children[index] is YouTubeAudioSource;
-  }
-
-  Future<void> _waitForProcessingReady(
-      {Duration timeout = const Duration(seconds: 5)}) async {
-    final deadline = DateTime.now().add(timeout);
-    while (DateTime.now().isBefore(deadline)) {
-      if (_player.processingState == ProcessingState.ready) return;
-      await Future.delayed(const Duration(milliseconds: 50));
-    }
   }
 
   Future<void> _waitForStartToSettle(
@@ -941,7 +864,6 @@ class MyAudioHandler extends BaseAudioHandler {
   @override
   Future<void> stop() async {
     _positionUpdateTimer?.cancel();
-    _initSettleSub?.cancel();
     await _player.stop();
     _coverSub?.cancel();
     _broadcastState(_player.playbackEvent);

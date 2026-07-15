@@ -291,16 +291,10 @@ void main() {
     });
 
     test(
-        'initSongs fires play() unconditionally even when processingState stays loading',
+        'play() does not fire when processingState stays loading (await-ready gate)',
         () async {
-      // Simulates Sound-Books: processingState stuck at loading (duration probe
-      // in-flight). Proves (a) the fake accepts a loading configuration — the
-      // infrastructure proof that loading→ready simulation is configurable — and
-      // (b) play() fires unconditionally regardless of processingState (the
-      // current bug Phase 3 will fix). PASSES today; WILL FAIL after the Phase 3
-      // ready-before-play fix (play deferred until ready → playCount stays 0 when
-      // ready never arrives). Phase 3 must update this test to emit ready on the
-      // stream once the listener re-fire is removed.
+      // Phase 3: With the await-ready gate, play() is deferred until
+      // ProcessingState.ready. When state stays loading, play() must NOT fire.
       final fake = FakePlaybackEngine();
       fake.processingState = ProcessingState.loading;
       final handler = MyAudioHandler(
@@ -308,7 +302,8 @@ void main() {
         configureAudioSession: false,
       );
 
-      await handler.initSongs(
+      // Start initSongs but don't await — it's blocked on the ready await.
+      handler.initSongs(
         _sampleFiles(),
         _sampleAudiobook(),
         0,
@@ -316,17 +311,14 @@ void main() {
         playImmediately: true,
       );
 
-      expect(fake.playCount, 1);
+      await Future<void>.delayed(const Duration(milliseconds: 10));
+
+      expect(fake.playCount, 0,
+          reason: 'play() must not fire while waiting for ProcessingState.ready');
       expect(fake.setAudioSourcesCalls, hasLength(1));
     });
 
-    // Skipped until Phase 3 implements ready-before-play.
-    // @Skip('await Phase 3 ready-before-play fix')
-    // (annotation form is not valid before a test() call in Dart — annotations
-    // apply to declarations, not call expressions; using the `skip:` parameter
-    // below instead, which is the flutter_test API for skipping a test.)
-    // Remove this skip after Phase 3 implements ready-before-play.
-    // This test verifies the race is gone.
+    // This test verifies the race is gone — play() deferred until ready.
     test(
         'play() does not fire before processingState reaches ready (race detector)',
         () async {
@@ -356,7 +348,7 @@ void main() {
       await initFuture;
 
       expect(fake.playCount, 1);
-    }, skip: 'await Phase 3 ready-before-play fix');
+    });
 
     // ── Phase 2: Subscription Lifecycle + State-Guard refactor tests ──
 
@@ -395,73 +387,6 @@ void main() {
               'If the stale gen-A finally clobbered gen-B flag, this would be true.');
     });
 
-    test('initSongs cancels previous processingStateStream listener on re-entry',
-        () async {
-      // D-03/D-05: Tracked _initSettleSub — re-entry cancels the previous
-      // listener instead of stacking. After two initSongs calls, exactly ONE
-      // listener should be active, not two.
-      final fake = FakePlaybackEngine();
-      final handler = MyAudioHandler(
-        player: fake,
-        configureAudioSession: false,
-      );
-
-      // First init with playImmediately so the settle listener is attached.
-      await handler.initSongs(
-        _sampleFiles(),
-        _sampleAudiobook(),
-        0,
-        0,
-        playImmediately: true,
-      );
-      expect(fake.processingStates.hasListener, isTrue,
-          reason: 'Settle listener should be active after initSongs');
-
-      // Second init — should cancel the first listener and attach a new one.
-      await handler.initSongs(
-        _sampleFiles(),
-        _sampleAudiobook(),
-        0,
-        0,
-        playImmediately: true,
-      );
-      expect(fake.processingStates.hasListener, isTrue,
-          reason: 'One listener should still be active (the new one)');
-
-      // Third init — still exactly one listener, not three.
-      await handler.initSongs(
-        _sampleFiles(),
-        _sampleAudiobook(),
-        0,
-        0,
-        playImmediately: true,
-      );
-      expect(fake.processingStates.hasListener, isTrue,
-          reason: 'Still exactly one listener after three initSongs calls');
-    });
-
-    test('stop() cancels all processingStateStream listeners', () async {
-      // D-05.2: stop() cancels _initSettleSub — full teardown.
-      final fake = FakePlaybackEngine();
-      final handler = MyAudioHandler(
-        player: fake,
-        configureAudioSession: false,
-      );
-
-      await handler.initSongs(
-        _sampleFiles(),
-        _sampleAudiobook(),
-        0,
-        0,
-        playImmediately: true,
-      );
-      expect(fake.processingStates.hasListener, isTrue,
-          reason: 'Listener active after initSongs');
-
-      await handler.stop();
-      expect(fake.processingStates.hasListener, isFalse,
-          reason: 'All listeners cancelled after stop()');
-    });
   });
 }
 

@@ -79,7 +79,6 @@ class _AudiobookDetailsState extends State<AudiobookDetails> {
 
       await audioHandlerProvider.audioHandler
           .initSongs(files, widget.audiobook, index, 0);
-      await audioHandlerProvider.audioHandler.play();
       _weSlideController.show();
     } catch (e) {
       AppLogger.debug('Error starting chapter playback: $e');
@@ -128,10 +127,14 @@ class _AudiobookDetailsState extends State<AudiobookDetails> {
         );
       }
 
-      await audioHandlerProvider.audioHandler.play();
       _weSlideController.show();
     } catch (e) {
       AppLogger.debug('Error auto-playing audiobook: $e');
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+            content: Text('Unable to start playback. Please try again.')),
+      );
     }
   }
 
@@ -510,40 +513,54 @@ class _AudiobookDetailsState extends State<AudiobookDetails> {
                                   color: AppColors.primaryColor,
                                   child: InkWell(
                                     customBorder: const CircleBorder(),
-                                    onTap: () {
-                                      playingAudiobookDetailsBox.put(
-                                          'audiobook', widget.audiobook.toMap());
-                                      playingAudiobookDetailsBox.put(
-                                        'audiobookFiles',
-                                        state.audiobookFiles
-                                            .map((e) => e.toMap())
-                                            .toList(),
-                                      );
-
-                                      if (historyOfAudiobook
-                                          .isAudiobookInHistory(widget.audiobook.id)) {
-                                        final historyItem = historyOfAudiobook
-                                            .getHistoryOfAudiobookItem(widget.audiobook.id);
-                                        audioHandlerProvider.audioHandler.initSongs(
-                                          state.audiobookFiles,
-                                          widget.audiobook,
-                                          historyItem.index,
-                                          historyItem.position,
+                                    onTap: () async {
+                                      try {
+                                        playingAudiobookDetailsBox.put(
+                                            'audiobook', widget.audiobook.toMap());
+                                        playingAudiobookDetailsBox.put(
+                                          'audiobookFiles',
+                                          state.audiobookFiles
+                                              .map((e) => e.toMap())
+                                              .toList(),
                                         );
-                                        playingAudiobookDetailsBox.put('index', historyItem.index);
-                                        playingAudiobookDetailsBox.put('position', historyItem.position);
-                                      } else {
-                                        playingAudiobookDetailsBox.put('index', 0);
-                                        playingAudiobookDetailsBox.put('position', 0);
-                                        audioHandlerProvider.audioHandler.initSongs(
-                                          state.audiobookFiles,
-                                          widget.audiobook,
-                                          0,
-                                          0,
+
+                                        if (historyOfAudiobook
+                                            .isAudiobookInHistory(widget.audiobook.id)) {
+                                          final historyItem = historyOfAudiobook
+                                              .getHistoryOfAudiobookItem(widget.audiobook.id);
+                                          playingAudiobookDetailsBox.put('index', historyItem.index);
+                                          playingAudiobookDetailsBox.put('position', historyItem.position);
+                                          await audioHandlerProvider.audioHandler.initSongs(
+                                            state.audiobookFiles,
+                                            widget.audiobook,
+                                            historyItem.index,
+                                            historyItem.position,
+                                            playImmediately: false,
+                                          );
+                                        } else {
+                                          playingAudiobookDetailsBox.put('index', 0);
+                                          playingAudiobookDetailsBox.put('position', 0);
+                                          await audioHandlerProvider.audioHandler.initSongs(
+                                            state.audiobookFiles,
+                                            widget.audiobook,
+                                            0,
+                                            0,
+                                            playImmediately: false,
+                                          );
+                                        }
+
+                                        await audioHandlerProvider.audioHandler.play();
+                                        _weSlideController.show();
+                                      } catch (e) {
+                                        AppLogger.debug(
+                                            'Error starting playback from button: $e');
+                                        if (!mounted) return;
+                                        ScaffoldMessenger.of(context).showSnackBar(
+                                          const SnackBar(
+                                              content: Text(
+                                                  'Unable to start playback. Please try again.')),
                                         );
                                       }
-
-                                      _weSlideController.show();
                                     },
                                     child: const SizedBox(
                                       width: 72,
