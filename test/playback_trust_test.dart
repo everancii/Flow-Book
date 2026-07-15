@@ -316,6 +316,10 @@ void main() {
       expect(fake.playCount, 0,
           reason: 'play() must not fire while waiting for ProcessingState.ready');
       expect(fake.setAudioSourcesCalls, hasLength(1));
+
+      // Emit ready so initSongs completes and doesn't leak a pending future.
+      fake.processingState = ProcessingState.ready;
+      fake.processingStates.add(ProcessingState.ready);
     });
 
     // This test verifies the race is gone — play() deferred until ready.
@@ -385,6 +389,90 @@ void main() {
       expect(handler.isReinitializing, isFalse,
           reason: 'Flag should be false after second initSongs completes. '
               'If the stale gen-A finally clobbered gen-B flag, this would be true.');
+    });
+
+    // ── Phase 4: TEST-03 invariant tests ──
+
+    test('gen-discard during await-ready prevents stale init from playing',
+        () async {
+      // TEST-03: If a newer initSongs starts while gen-A is awaiting
+      // ProcessingState.ready, gen-A must NOT call play() when ready
+      // eventually arrives — the gen-guard after the await discards it.
+      final fake = FakePlaybackEngine();
+      fake.processingState = ProcessingState.loading;
+      final handler = MyAudioHandler(
+        player: fake,
+        configureAudioSession: false,
+      );
+
+      // Gen-1: starts, blocks on await ready (state is loading).
+      handler.initSongs(
+        _sampleFiles(),
+        _sampleAudiobook(),
+        0,
+        0,
+        playImmediately: true,
+      );
+
+      await Future<void>.delayed(const Duration(milliseconds: 10));
+      expect(fake.playCount, 0, reason: 'Gen-1 blocked on await ready');
+
+      // Gen-2: supersedes gen-1 while gen-1 is still awaiting.
+      // Gen-2 also blocks on await ready (state still loading).
+      handler.initSongs(
+        _sampleFiles(),
+        _sampleAudiobook(),
+        0,
+        0,
+        playImmediately: true,
+      );
+
+      await Future<void>.delayed(const Duration(milliseconds: 10));
+
+      // Now emit ready — both gens' awaits resolve, but only gen-2
+      // (the active gen) should call play(). Gen-1 is gen-discarded.
+      fake.processingState = ProcessingState.ready;
+      fake.processingStates.add(ProcessingState.ready);
+
+      // Allow the microtask queue to process the ready event.
+      await Future<void>.delayed(const Duration(milliseconds: 50));
+
+      expect(fake.playCount, 1,
+          reason: 'Only gen-2 should call play(). Gen-1 must be discarded '
+              'by the gen-guard after the await-ready resolves.');
+    });
+
+    test('timeout fallback blocks play when ready never arrives', () async {
+      // TEST-03: When ProcessingState.ready never arrives, initSongs
+      // blocks on the await-ready gate — play() does NOT fire. The 10s
+      // timeout will eventually throw TimeoutException (tested at the
+      // integration level), but here we verify the blocking behavior:
+      // playCount stays 0 while waiting.
+      final fake = FakePlaybackEngine();
+      fake.processingState = ProcessingState.loading;
+      final handler = MyAudioHandler(
+        player: fake,
+        configureAudioSession: false,
+      );
+
+      // Start initSongs — it blocks on the await-ready gate.
+      handler.initSongs(
+        _sampleFiles(),
+        _sampleAudiobook(),
+        0,
+        0,
+        playImmediately: true,
+      );
+
+      // Pump — play() must not fire while waiting.
+      await Future<void>.delayed(const Duration(milliseconds: 50));
+      expect(fake.playCount, 0,
+          reason: 'play() must not fire while awaiting ready');
+
+      // Emit ready so initSongs completes cleanly — prevents the 10s
+      // timeout from firing during a later test.
+      fake.processingState = ProcessingState.ready;
+      fake.processingStates.add(ProcessingState.ready);
     });
 
   });

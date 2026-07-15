@@ -115,20 +115,20 @@ class AudiobookFile {
     }
   }
 
-  static int _parseIntSafely(dynamic value) {
-    if (value == null) return 0;
+  static int? _parseIntSafely(dynamic value) {
+    if (value == null) return null;
     if (value is int) return value;
 
     try {
       return int.parse(value.toString());
     } catch (e) {
       AppLogger.debug('Error parsing int value: $value, error: $e');
-      return 0;
+      return null;
     }
   }
 
-  static double _parseDoubleSafely(dynamic value) {
-    if (value == null) return 0.0;
+  static double? _parseDoubleSafely(dynamic value) {
+    if (value == null) return null;
     if (value is double) return value;
     if (value is int) return value.toDouble();
 
@@ -136,7 +136,7 @@ class AudiobookFile {
       return double.parse(value.toString());
     } catch (e) {
       AppLogger.debug('Error parsing double value: $value, error: $e');
-      return 0.0;
+      return null;
     }
   }
 
