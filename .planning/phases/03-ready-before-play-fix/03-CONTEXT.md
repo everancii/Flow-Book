@@ -44,10 +44,10 @@ Seven requirements (PLAY-01, PLAY-02, PLAY-04, PLAY-05, PLAY-06, ERR-01, ERR-02)
 ### Call-Site Consistency (PLAY-04)
 - **D-07:** **Big play button** (`audiobook_details.dart:527-544`): change to `await initSongs(..., playImmediately: false)` then `await play()`. Wrap in a try/catch with `if (!mounted) return` + SnackBar. This makes the button explicit: load first (no internal play), then explicitly call play() after.
 - **D-08:** **`_autoPlay`** (line 131) and **`_playChapter`** (line 82): remove the redundant `await audioHandlerProvider.audioHandler.play()` calls. With the new await-ready mechanism inside `initSongs` (when `playImmediately: true`), `initSongs` handles play internally — the separate `play()` calls are no-ops.
-- **D-09:** `_autoPlay` and `_playChapter` continue using `playImmediately: true` (the default) — `initSongs` loads, awaits ready, then plays internally.
+- **D-09 [informational]:** `_autoPlay` and `_playChapter` continue using `playImmediately: true` (the default) — `initSongs` loads, awaits ready, then plays internally.
 
 ### Error Surfacing + Mounted Guards (ERR-01, ERR-02)
-- **D-10:** Keep the existing Phase 1 try/catch around `setAudioSources` that **rethrows** after logging. The caller catches the exception (whether `PlayerException` from a failed duration probe, or `TimeoutException` from the ready-await) and shows the SnackBar. No error-state stream or notifier needed.
+- **D-10 [informational]:** Keep the existing Phase 1 try/catch around `setAudioSources` that **rethrows** after logging. The caller catches the exception (whether `PlayerException` from a failed duration probe, or `TimeoutException` from the ready-await) and shows the SnackBar. No error-state stream or notifier needed.
 - **D-11:** All three call sites get the same catch-block pattern (matching `_playChapter`'s existing pattern at lines 84-91):
   ```dart
   } catch (e) {
