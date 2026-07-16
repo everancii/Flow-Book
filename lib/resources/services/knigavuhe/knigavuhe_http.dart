@@ -27,11 +27,11 @@ class KnigavuheHttp {
   };
 
   static bool isBlocked(http.Response response) {
-    final server = response.headers['server']?.toLowerCase() ?? '';
+    if (response.statusCode == 501 || response.statusCode == 403) {
+      return true;
+    }
     final body = response.body.toLowerCase();
-    return server.contains('ddos-guard') ||
-        body.contains('ddos-guard') ||
-        body.contains('/.well-known/ddos-guard/') ||
+    return body.contains('/.well-known/ddos-guard/') ||
         body.contains('checking your browser');
   }
 }
