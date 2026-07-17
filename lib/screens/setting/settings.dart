@@ -92,7 +92,7 @@ class _SettingsState extends State<Settings> {
     );
     _enabledSources = List<String>.from(
       _settingsBox.get('enabledSearchSources',
-          defaultValue: _sourceLabels.keys.toList()),
+          defaultValue: ['librivox', 'youtube', 'archiveOrg', 'fourRead', 'soundbooks']),
     );
     _loadAppVersion();
     _checkForUpdate();

@@ -396,8 +396,9 @@ class _AudiobookDetailsState extends State<AudiobookDetails> {
                     ),
                   );
                 } else if (state is AudiobookDetailsLoaded) {
-                  // Auto-play on first details load
-                  if (!_autoPlayTriggered) {
+                  // Auto-play on first details load (except Sound-Books
+                  // which should show chapters first, then play on tap).
+                  if (!_autoPlayTriggered && !widget.isSoundBooks) {
                     _autoPlayTriggered = true;
                     WidgetsBinding.instance.addPostFrameCallback((_) {
                       if (mounted) _autoPlay(state.audiobookFiles);

@@ -2,10 +2,12 @@ import 'package:audiobookflow/resources/designs/theme_notifier.dart';
 import 'package:audiobookflow/screens/home/widgets/favourite_section.dart';
 import 'package:audiobookflow/screens/setting/listening_stats_screen.dart';
 import 'package:audiobookflow/utils/app_logger.dart';
+import 'package:audiobookflow/utils/app_events.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:hive_flutter/hive_flutter.dart';
 import 'package:provider/provider.dart';
 
 import '../../resources/latest_version_fetch.dart';
@@ -25,11 +27,27 @@ class Home extends StatefulWidget {
 class _HomeState extends State<Home> {
   final LatestVersionFetch _latestVersionFetch = LatestVersionFetch();
   String currentVersion = '';
+  bool _knigavuheEnabled = false;
 
   @override
   void initState() {
     super.initState();
     _loadVersionAndCheck();
+    _readKnigavuheSetting();
+    AppEvents.searchSourcesChanged.stream.listen((_) {
+      if (mounted) _readKnigavuheSetting();
+    });
+  }
+
+  void _readKnigavuheSetting() {
+    final box = Hive.box('settings');
+    final sources = List<String>.from(
+      box.get('enabledSearchSources',
+          defaultValue: ['librivox', 'youtube', 'archiveOrg', 'fourRead', 'soundbooks']),
+    );
+    setState(() {
+      _knigavuheEnabled = sources.contains('knigavuhe');
+    });
   }
 
   @override
@@ -154,9 +172,10 @@ class _HomeState extends State<Home> {
           SliverToBoxAdapter(
             child: _buildTop100Spotlight(context),
           ),
-          SliverToBoxAdapter(
-            child: _buildKnigavuheSpotlight(context),
-          ),
+          if (_knigavuheEnabled)
+            SliverToBoxAdapter(
+              child: _buildKnigavuheSpotlight(context),
+            ),
           SliverToBoxAdapter(
             child: _buildSoundBooksSpotlight(context),
           ),

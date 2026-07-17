@@ -160,6 +160,10 @@ class AudiobookDetailsBloc
             }
             emit(AudiobookDetailsLoaded(r.files,
                 soundBooksDescription: r.description));
+            // Probe real durations for sound-books tracks that have no metadata.
+            if (r.files.any((f) => (f.length ?? 0) <= 0)) {
+              add(ProbeFourReadDurations([...r.files]));
+            }
           },
         );
       } else {
@@ -228,11 +232,20 @@ class AudiobookDetailsBloc
       }
     }
     if (updated) {
-      // Preserve description already surfaced in the previous state.
-      final prevDesc = state is AudiobookDetailsLoaded
+      // Preserve descriptions already surfaced in the previous state.
+      final prevFourReadDesc = state is AudiobookDetailsLoaded
           ? (state as AudiobookDetailsLoaded).fourReadDescription
           : null;
-      emit(AudiobookDetailsLoaded(files, fourReadDescription: prevDesc));
+      final prevKnigavuheDesc = state is AudiobookDetailsLoaded
+          ? (state as AudiobookDetailsLoaded).knigavuheDescription
+          : null;
+      final prevSoundBooksDesc = state is AudiobookDetailsLoaded
+          ? (state as AudiobookDetailsLoaded).soundBooksDescription
+          : null;
+      emit(AudiobookDetailsLoaded(files,
+          fourReadDescription: prevFourReadDesc,
+          knigavuheDescription: prevKnigavuheDesc,
+          soundBooksDescription: prevSoundBooksDesc));
     }
   }
 

@@ -98,7 +98,7 @@ class _SearchAudiobookState extends State<SearchAudiobook> {
     final box = Hive.box('settings');
     return List<String>.from(
       box.get('enabledSearchSources',
-          defaultValue: ['librivox', 'youtube', 'archiveOrg', 'fourRead', 'knigavuhe', 'soundbooks']),
+          defaultValue: ['librivox', 'youtube', 'archiveOrg', 'fourRead', 'soundbooks']),
     );
   }
 
@@ -180,6 +180,8 @@ class _SearchAudiobookState extends State<SearchAudiobook> {
                             ),
                             border: InputBorder.none,
                             isDense: true,
+                            contentPadding:
+                                const EdgeInsets.symmetric(vertical: 9),
                             suffixIcon: _searchController.text.isNotEmpty
                                 ? IconButton(
                                     icon: Icon(
@@ -243,14 +245,6 @@ class _SearchAudiobookState extends State<SearchAudiobook> {
                       _doSearch();
                     }
                   },
-                ),
-                const SizedBox(height: 6),
-                Text(
-                  'Choose which source to search, or keep both selected.',
-                  style: GoogleFonts.ubuntu(
-                    fontSize: 12,
-                    color: isDark ? Colors.grey.shade400 : Colors.grey.shade600,
-                  ),
                 ),
               ],
             ),
@@ -891,23 +885,6 @@ class _EmptyPrompt extends StatelessWidget {
             color: AppColors.primaryColor.withValues(alpha: 0.3),
           ),
           const SizedBox(height: 16),
-          Text(
-            'Search LibriVox, YouTube, 4Read, Knigavuhe & Sound-Books',
-            style: GoogleFonts.ubuntu(
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-              color: Colors.grey.shade500,
-            ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            'Find free audiobooks, lectures, and stories in one place',
-            style: GoogleFonts.ubuntu(
-              fontSize: 13,
-              color: Colors.grey.shade400,
-            ),
-            textAlign: TextAlign.center,
-          ),
         ],
       ),
     );
