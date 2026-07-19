@@ -55,17 +55,21 @@ sed -i '' "s/^version: .*/version: $NEW_VERSION/" pubspec.yaml
 echo "$NEW_SEMVER" > assets/version.json
 echo "   ✅ pubspec.yaml + assets/version.json"
 
-# ─── Build release APK ──────────────────────────────────────────────────────
+# ─── Build release APKs (split per ABI) ─────────────────────────────────────
 echo ""
-echo "🔨 Building release APK..."
-flutter build apk --release
-APK_PATH="build/app/outputs/flutter-apk/app-release.apk"
-echo "   ✅ APK built: $APK_PATH ($(du -sh "$APK_PATH" | cut -f1))"
+echo "🔨 Building release APKs (split per ABI)..."
+flutter build apk --split-per-abi --release
+ARM64="build/app/outputs/flutter-apk/app-arm64-v8a-release.apk"
+ARMV7="build/app/outputs/flutter-apk/app-armeabi-v7a-release.apk"
+X86_64="build/app/outputs/flutter-apk/app-x86_64-release.apk"
+echo "   ✅ ARM64-v8a:  $(du -sh "$ARM64" | cut -f1)"
+echo "   ✅ ARMv7:      $(du -sh "$ARMV7" | cut -f1)"
+echo "   ✅ x86_64:     $(du -sh "$X86_64" | cut -f1)"
 
 # ─── Git commit & push ──────────────────────────────────────────────────────
 echo ""
 echo "📤 Committing & pushing..."
-git add pubspec.yaml assets/version.json build/app/outputs/flutter-apk/app-release.apk
+git add pubspec.yaml assets/version.json
 git commit -m "v${NEW_SEMVER}: release build"
 git push origin main
 echo "   ✅ Pushed to origin/main"
@@ -76,7 +80,7 @@ echo "🚀 Creating GitHub release..."
 gh release create "v${NEW_SEMVER}" \
   --title "v${NEW_SEMVER}" \
   --notes "Release v${NEW_SEMVER} (build ${NEW_BUILD})" \
-  "$APK_PATH#FlowBook-v${NEW_SEMVER}.apk"
+  "$ARM64" "$ARMV7" "$X86_64"
 echo "   ✅ Release created: https://github.com/everancii/Flow-Book/releases/tag/v${NEW_SEMVER}"
 
 echo ""
