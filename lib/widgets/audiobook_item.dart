@@ -107,6 +107,8 @@ class AudiobookItem extends StatelessWidget {
                 'isYoutube': audiobook.origin == 'youtube',
                 'isLocal': audiobook.origin == 'local',
                 'isFourRead': audiobook.origin == AppConstants.fourReadDirName,
+                'isKnigavuhe': audiobook.origin == AppConstants.knigavuheDirName,
+                'isSoundBooks': audiobook.origin == AppConstants.soundBooksDirName,
               },
             );
           },
