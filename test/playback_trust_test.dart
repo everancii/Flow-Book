@@ -241,6 +241,84 @@ void main() {
       expect(handler.mediaItem.value?.title, 'Middle');
     });
 
+    test(
+        'initSongs(playImmediately:false) does NOT seek before deferred load '
+        '(forked just_audio regression)', () async {
+      // Regression for v1.2.x Sound-Books big-play-button path. That path
+      // uses playImmediately:false, which sets preload:false on the forked
+      // just_audio. The fork defers the native load until play(), storing
+      // initialIndex/initialPosition in _pluginLoadRequest.initialSeekValues.
+      // But the fork's seek() unconditionally wipes those values
+      // (resetInitialSeekValues, just_audio.dart:1348). A seek() issued
+      // BEFORE play() — while the source is still deferred — causes the
+      // deferred load to fall back to index 0 / position 0, so playback
+      // starts from the first file instead of the saved position.
+      //
+      // Fix: skip the post-setAudioSources seek when !playImmediately. The
+      // fork applies initialSeekValues on the deferred load triggered by
+      // play(), so no compensating seek is needed.
+      final fake = FakePlaybackEngine();
+      final handler = MyAudioHandler(
+        player: fake,
+        configureAudioSession: false,
+      );
+
+      await handler.initSongs(
+        _sampleFiles(),
+        _sampleAudiobook(),
+        1,
+        123456,
+        playImmediately: false,
+      );
+
+      // setAudioSources must carry the saved index/position as initial values.
+      expect(fake.setAudioSourcesCalls, hasLength(1));
+      expect(fake.setAudioSourcesCalls.single.initialIndex, 1);
+      expect(
+        fake.setAudioSourcesCalls.single.initialPosition,
+        const Duration(milliseconds: 123456),
+      );
+      expect(fake.setAudioSourcesCalls.single.preload, false);
+
+      // NO seek must be issued while the source is deferred — the fork's
+      // seek() would wipe initialSeekValues, causing play() to load at 0.
+      expect(
+        fake.seekCalls,
+        isEmpty,
+        reason: 'seek() before deferred load wipes initialSeekValues in fork',
+      );
+    });
+
+    test('initSongs(playImmediately:true) still seeks after load (preload path)',
+        () async {
+      // Companion to the regression above: the preload:true path must still
+      // issue a seek to refine position after the source loads synchronously.
+      final fake = FakePlaybackEngine();
+      final handler = MyAudioHandler(
+        player: fake,
+        configureAudioSession: false,
+      );
+
+      final initFuture = handler.initSongs(
+        _sampleFiles(),
+        _sampleAudiobook(),
+        1,
+        123456,
+        playImmediately: true,
+      );
+      // playImmediately:true awaits processingStateStream.firstWhere(ready).
+      // Let initSongs reach the subscription, then emit ready.
+      await Future<void>.delayed(const Duration(milliseconds: 10));
+      fake.processingStates.add(ProcessingState.ready);
+      await initFuture;
+
+      expect(fake.setAudioSourcesCalls.single.preload, true);
+      expect(fake.seekCalls, isNotEmpty);
+      expect(fake.seekCalls.last.position,
+          const Duration(milliseconds: 123456));
+      expect(fake.seekCalls.last.index, 1);
+    });
+
     test('skipToQueueItem seeks to chapter start and resumes playback',
         () async {
       final fake = FakePlaybackEngine();

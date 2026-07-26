@@ -556,10 +556,12 @@ class MyAudioHandler extends BaseAudioHandler {
 
       if (myGen != _initGen) return;
 
-      await _player.seek(Duration(milliseconds: positionInMilliseconds),
-          index: safeIndex);
-
       if (playImmediately) {
+        // Refine position with a seek after the synchronous load
+        // (preload:true loads inside setAudioSources above).
+        await _player.seek(Duration(milliseconds: positionInMilliseconds),
+            index: safeIndex);
+
         // D-01: Await ProcessingState.ready before play(). BehaviorSubject
         // replays the last value, so already-ready sources (LibriVox, YouTube,
         // knigavuhe, 4read) complete synchronously — zero added latency.
@@ -579,6 +581,13 @@ class MyAudioHandler extends BaseAudioHandler {
 
         _player.play();
       }
+      // With playImmediately:false, do NOT seek: the forked just_audio
+      // defers the native load until play() and stashes
+      // initialIndex/initialPosition in _pluginLoadRequest.initialSeekValues.
+      // The fork's seek() unconditionally wipes those values, so a seek here
+      // would make the deferred load fall back to index 0 / position 0.
+      // setAudioSources already passed initialIndex/initialPosition; play()
+      // applies them on the deferred load.
 
       await _waitForStartToSettle(
         safeIndex,
