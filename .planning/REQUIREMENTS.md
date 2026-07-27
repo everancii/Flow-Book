@@ -11,7 +11,7 @@ Requirements for this milestone. Each maps to roadmap phases.
 
 - [x] **PLAY-01**: Opening a Sound-Books book from browse or search starts playback automatically — zero extra taps, matching LibriVox/YouTube/knigavuhe/4read behavior
 - [x] **PLAY-02**: Opening a Sound-Books book already in history (resume) auto-plays at the saved position
-- [ ] **PLAY-03**: LibriVox, YouTube, knigavuhe, and 4read auto-play continue to work unchanged (no regression)
+- [x] **PLAY-03**: LibriVox, YouTube, knigavuhe, and 4read auto-play continue to work unchanged (no regression)
 - [x] **PLAY-04**: The big circle play button on the details screen calls `play()` after `initSongs` (matches `_playChapter` and `_autoPlay` — currently inconsistent)
 
 ### Play-Init Sequence
@@ -30,8 +30,8 @@ Requirements for this milestone. Each maps to roadmap phases.
 ### Testability
 
 - [x] **TEST-01**: `FakePlaybackEngine` is extended to simulate a `loading → ready` `ProcessingState` transition (precursor — the fix is untestable without it, since the fake currently always reports `ready`)
-- [ ] **TEST-02**: `playback_trust_test.dart` (520 lines) stays green — all existing assertions preserved
-- [ ] **TEST-03**: New test cases cover: ready-before-play ordering, loading-state wait, gen-discard during wait, timeout fallback, tracked-sub cancellation, no orphan listeners
+- [x] **TEST-02**: `playback_trust_test.dart` (520 lines) stays green — all existing assertions preserved
+- [x] **TEST-03**: New test cases cover: ready-before-play ordering, loading-state wait, gen-discard during wait, timeout fallback, tracked-sub cancellation, no orphan listeners
 
 ## v2 Requirements
 
@@ -65,7 +65,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 |-------------|-------|--------|
 | PLAY-01 | Phase 3 | Complete |
 | PLAY-02 | Phase 3 | Complete |
-| PLAY-03 | Phase 4 | Pending |
+| PLAY-03 | Phase 4 | Complete |
 | PLAY-04 | Phase 3 | Complete |
 | PLAY-05 | Phase 3 | Complete |
 | PLAY-06 | Phase 3 | Complete |
@@ -75,8 +75,8 @@ Which phases cover which requirements. Updated during roadmap creation.
 | ERR-01 | Phase 3 | Complete |
 | ERR-02 | Phase 3 | Complete |
 | TEST-01 | Phase 1 | Complete |
-| TEST-02 | Phase 4 | Pending |
-| TEST-03 | Phase 4 | Pending |
+| TEST-02 | Phase 4 | Complete |
+| TEST-03 | Phase 4 | Complete |
 
 **Coverage:**
 

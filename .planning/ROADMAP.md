@@ -111,4 +111,4 @@ Phases execute in numeric order: 1 → 2 → 3 → 4
 | 1. Diagnostic Verification + Test Infrastructure | 2/2 | Complete   | 2026-07-14 |
 | 2. Subscription Lifecycle + State-Guard Cleanup | 1/1 | Complete | 2026-07-15 |
 | 3. Ready-Before-Play Fix | 1/1 | Complete    | 2026-07-27 |
-| 4. Call-Site Consistency + Cross-Source Verification | 1/1 | Code complete (PLAY-03 manual UAT pending) | 2026-07-27 |
+| 4. Call-Site Consistency + Cross-Source Verification | 1/1 | Complete    | 2026-07-27 |
