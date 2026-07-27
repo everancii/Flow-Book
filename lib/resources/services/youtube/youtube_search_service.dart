@@ -1,28 +1,15 @@
 import 'package:audiobookflow/resources/models/audiobook.dart';
 import 'package:audiobookflow/utils/app_constants.dart';
 import 'package:audiobookflow/utils/app_logger.dart';
-import 'package:hive/hive.dart';
 import 'package:youtube_explode_dart/youtube_explode_dart.dart';
 
 /// Searches YouTube for audiobooks using [youtube_explode_dart] — no API key required.
 ///
-/// Runs parallel searches (videos + playlists) for each selected language
-/// and merges results so that:
+/// Runs parallel searches (videos + playlists) and merges results so that:
 /// - Single-file audiobooks (e.g. a 7-hour Carrie video) are found via video search.
 /// - Multi-chapter series (e.g. "Воно # 01…67") appear as one playlist card.
 class YoutubeSearchService {
   final YoutubeExplode _yt = YoutubeExplode();
-
-  static const Map<String, String> _audiobookTerms = {
-    'en': 'audiobook',
-    'uk': 'аудіокнига',
-    'ru': 'аудиокнига',
-    'de': 'hörbuch',
-    'fr': 'livre audio',
-    'es': 'audiolibro',
-    'it': 'audiolibri',
-    'pl': 'audiobook',
-  };
 
   Future<List<Audiobook>> search(
     String query, {
@@ -30,39 +17,23 @@ class YoutubeSearchService {
     int pageSize = 20,
   }) async {
     try {
-      final box = Hive.box('language_prefs_box');
-      final selectedLanguages = List<String>.from(
-          box.get('selectedLanguages', defaultValue: <String>['en']));
+      // Default search term — used for all queries.
+      const term = 'audiobook';
 
-      final terms = selectedLanguages
-          .map((lang) => _audiobookTerms[lang] ?? 'audiobook')
-          .toSet();
-      if (terms.isEmpty) terms.add('audiobook');
+      AppLogger.debug('YouTube Search: query="$query"');
 
-      // If query is mostly Latin, prioritize English "audiobook"
-      final isMostlyLatin = RegExp(r'^[a-zA-Z0-9\s\p{P}]+$', unicode: true).hasMatch(query);
-      final sortedTerms = terms.toList();
-      if (isMostlyLatin && sortedTerms.contains('audiobook')) {
-        sortedTerms.remove('audiobook');
-        sortedTerms.insert(0, 'audiobook');
-      }
-
-      AppLogger.debug('YouTube Search: query="$query", latin=$isMostlyLatin, languages=$selectedLanguages, terms=$sortedTerms');
-
-      // Parallel: search for each language term
+      // Parallel: search for videos + playlists.
       final futures = <Future<List<SearchResult>>>[];
-      for (final term in sortedTerms) {
-        final q = '$query $term';
-        AppLogger.debug('YouTube Search: performing search for q="$q"');
-        futures.add(_yt.search
-            .searchContent(q)
-            .then((l) => l.toList())
-            .catchError((_) => <SearchResult>[]));
-        futures.add(_yt.search
-            .searchContent(q, filter: TypeFilters.playlist)
-            .then((l) => l.toList())
-            .catchError((_) => <SearchResult>[]));
-      }
+      final q = '$query $term';
+      AppLogger.debug('YouTube Search: performing search for q="$q"');
+      futures.add(_yt.search
+          .searchContent(q)
+          .then((l) => l.toList())
+          .catchError((_) => <SearchResult>[]));
+      futures.add(_yt.search
+          .searchContent(q, filter: TypeFilters.playlist)
+          .then((l) => l.toList())
+          .catchError((_) => <SearchResult>[]));
 
       final allResults = await Future.wait(futures);
       final combined = <SearchResult>[];

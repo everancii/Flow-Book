@@ -1,6 +1,5 @@
-import 'dart:async'; // <-- added
+
 import 'package:audiobookflow/utils/app_logger.dart';
-import 'package:audiobookflow/utils/app_events.dart'; // <-- added
 import 'package:bloc/bloc.dart';
 import 'package:fpdart/fpdart.dart';
 import 'package:audiobookflow/resources/archive_api.dart';
@@ -37,31 +36,16 @@ class GenreAudiobooksBloc
 
   final ArchiveApi archiveApi;
 
-  String? _lastGenre;
-  StreamSubscription<void>? _langSub;
-
   GenreAudiobooksBloc({required this.archiveApi})
       : super(const GenreAudiobooksState()) {
     on<LoadInitialAudiobooksEvent>(_onLoadInitialAudiobooks);
     on<LoadMoreAudiobooksEvent>(_onLoadMoreAudiobooks);
-
-    // Listen for language changes and refresh lists
-    _langSub = AppEvents.languagesChanged.stream.listen((_) {
-      final g = _lastGenre;
-      if (g != null && g.isNotEmpty) {
-        add(LoadInitialAudiobooksEvent(genre: g, listType: 'popular'));
-        add(LoadInitialAudiobooksEvent(genre: g, listType: 'popularWeekly'));
-        add(LoadInitialAudiobooksEvent(genre: g, listType: 'latest'));
-      }
-    });
   }
 
   Future<void> _onLoadInitialAudiobooks(
     LoadInitialAudiobooksEvent event,
     Emitter<GenreAudiobooksState> emit,
   ) async {
-    _lastGenre = event.genre; // <-- remember genre
-
     // NEW: don't double-load same listType while it's already loading
     if (state.isLoadingListType(event.listType)) return;
 
@@ -179,9 +163,4 @@ class GenreAudiobooksBloc
     }
   }
 
-  @override
-  Future<void> close() {
-    _langSub?.cancel(); // <-- cleanup
-    return super.close();
-  }
 }

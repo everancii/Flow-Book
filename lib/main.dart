@@ -82,7 +82,6 @@ Future<void> initHive() async {
   await Hive.openBox('history_of_audiobook_box');
   await Hive.openBox('recommened_audiobooks_box');
   await Hive.openBox('dual_mode_box'); // 0 = audiobook home, 1 = podcast home
-  await Hive.openBox('language_prefs_box');
   await Hive.openBox('bookmarks_box');
   await Hive.openBox('listening_stats_box');
   await Hive.openBox('four_read_auth');

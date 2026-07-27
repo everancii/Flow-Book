@@ -1,4 +1,4 @@
-import 'dart:async';
+
 
 import 'package:audiobookflow/resources/archive_api.dart';
 import 'package:audiobookflow/resources/models/audiobook.dart';
@@ -6,7 +6,6 @@ import 'package:audiobookflow/resources/services/four_read/four_read_search_serv
 import 'package:audiobookflow/resources/services/knigavuhe/knigavuhe_search_service.dart';
 import 'package:audiobookflow/resources/services/soundbooks/soundbooks_search_service.dart';
 import 'package:audiobookflow/resources/services/youtube/youtube_search_service.dart';
-import 'package:audiobookflow/utils/app_events.dart';
 import 'package:bloc/bloc.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:meta/meta.dart';
@@ -32,22 +31,9 @@ class SearchBloc extends Bloc<SearchEvent, SearchState> {
   final KnigavuheSearchService _knigavuheSearch = KnigavuheSearchService();
   final SoundBooksSearchService _soundBooksSearch = SoundBooksSearchService();
 
-  StreamSubscription<void>? _langSub;
-
   SearchBloc() : super(SearchInitial()) {
     on<EventSearchIconClicked>(_onSearchSubmitted);
     on<EventLoadMoreResults>(_onLoadMore);
-
-    // Refresh the current query on language change so LibriVox results stay in sync.
-    _langSub = AppEvents.languagesChanged.stream.listen((_) {
-      final q = lastQuery?.trim();
-      if (q != null && q.isNotEmpty) {
-        add(EventSearchIconClicked(
-          q,
-          sourceSelection: lastSourceSelection,
-        ));
-      }
-    });
   }
 
   Future<void> _onSearchSubmitted(
@@ -444,7 +430,6 @@ class SearchBloc extends Bloc<SearchEvent, SearchState> {
 
   @override
   Future<void> close() {
-    _langSub?.cancel();
     _youtubeSearch.dispose();
     return super.close();
   }

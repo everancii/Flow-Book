@@ -38,35 +38,7 @@ class Settings extends StatefulWidget {
 }
 
 class _SettingsState extends State<Settings> {
-  // Used from archive.org/details/librivoxaudio 's language filter, sorted
-  static const Map<String, String> _langs = {
-    'en': 'English',
-    'de': 'Deutsch (German)',
-    'es': 'Español (Spanish)',
-    'fr': 'Français (French)',
-    'nl': 'Nederlands (Dutch)',
-    'mul': 'Multiple / Multilingual',
-    'pt': 'Português (Portuguese)',
-    'it': 'Italian (Italian)',
-    'ru': 'Русский (Russian)',
-    'uk': 'Українська (Ukrainian)',
-    'el': 'Ελληνικά (Greek)',
-    'grc': 'Ancient Greek',
-    'ja': '日本語 (Japanese)',
-    'pl': 'Polski (Polish)',
-    'zh': '中文 (Chinese)',
-    'he': 'עברית (Hebrew)',
-    'la': 'Latina (Latin)',
-    'fi': 'Suomi (Finnish)',
-    'sv': 'Svenska (Swedish)',
-    'ca': 'Català (Catalan)',
-    'da': 'Dansk (Danish)',
-    'eo': 'Esperanto',
-  };
-
-  late final Box _box;
   late final Box _settingsBox;
-  List<String> _selected = [];
   List<String> _enabledSources = [];
   String _appVersion = '';
   LatestVersionFetchModel? _updateInfo;
@@ -85,11 +57,7 @@ class _SettingsState extends State<Settings> {
   @override
   void initState() {
     super.initState();
-    _box = Hive.box('language_prefs_box');
     _settingsBox = Hive.box('settings');
-    _selected = List<String>.from(
-      _box.get('selectedLanguages', defaultValue: <String>[]),
-    );
     _enabledSources = List<String>.from(
       _settingsBox.get('enabledSearchSources',
           defaultValue: ['librivox', 'youtube', 'archiveOrg', 'fourRead', 'soundbooks']),
@@ -180,79 +148,6 @@ class _SettingsState extends State<Settings> {
     } finally {
       if (mounted) setState(() => _updatingApp = false);
     }
-  }
-
-  Future<void> _editLanguages() async {
-    final temp = {..._selected}; // work on a copy in the dialog
-    await showDialog(
-      context: context,
-      builder: (ctx) {
-        return AlertDialog(
-          title: const Text('Visible languages'),
-          content: SizedBox(
-            width: double.maxFinite,
-            child: ListView(
-              shrinkWrap: true,
-              children: _langs.entries.map((e) {
-                final code = e.key;
-                final label = e.value;
-                final checked = temp.contains(code);
-                return Column(
-                  children: [
-                    CheckboxListTile(
-                      value: checked,
-                      onChanged: (v) {
-                        setState(() {}); // keep dialog snappy
-                        if (v == true) {
-                          temp.add(code);
-                        } else {
-                          temp.remove(code);
-                        }
-                        // force rebuild of dialog
-                        (ctx as Element).markNeedsBuild();
-                      },
-                      title: Text(label),
-                      controlAffinity: ListTileControlAffinity.leading,
-                      dense: true,
-                    ),
-                    const SizedBox(height: 10),
-                  ],
-                );
-              }).toList(),
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(ctx).pop(),
-              child: const Text('Cancel'),
-            ),
-            FilledButton(
-              onPressed: () async {
-                // Persist selection
-                await _box.put('selectedLanguages', temp.toList()..sort());
-                setState(() {
-                  _selected = temp.toList()..sort();
-                });
-                AppEvents.languagesChanged.add(null); // <-- broadcast refresh
-                if (ctx.mounted) {
-                  Navigator.of(ctx).pop();
-                }
-                if (mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text(
-                        'Language filter saved. Lists will update on next fetch.',
-                      ),
-                    ),
-                  );
-                }
-              },
-              child: const Text('Save'),
-            ),
-          ],
-        );
-      },
-    );
   }
 
   Future<void> _editSearchSources() async {
@@ -373,10 +268,6 @@ class _SettingsState extends State<Settings> {
 
   @override
   Widget build(BuildContext context) {
-    final chips = _selected.isEmpty
-        ? [const Chip(label: Text('All languages (no filter)'))]
-        : _selected.map((c) => Chip(label: Text(_langs[c] ?? c))).toList();
-
     final themeNotifier = Provider.of<ThemeNotifier>(context);
     final currentTheme = themeNotifier.currentTheme;
 
@@ -394,20 +285,6 @@ class _SettingsState extends State<Settings> {
             subtitle: Text(_themeSubtitle(currentTheme)),
             trailing: const Icon(Icons.edit),
             onTap: () => _pickTheme(context),
-          ),
-          const Divider(),
-
-          // Language filter
-          ListTile(
-            leading: const Icon(Icons.language),
-            title: const Text('Visible languages'),
-            subtitle: Wrap(
-              spacing: 8,
-              runSpacing: -8,
-              children: chips,
-            ),
-            trailing: const Icon(Icons.edit),
-            onTap: _editLanguages,
           ),
           const Divider(),
 
