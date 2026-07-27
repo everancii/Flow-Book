@@ -9,23 +9,23 @@ Requirements for this milestone. Each maps to roadmap phases.
 
 ### Auto-Play Reliability
 
-- [ ] **PLAY-01**: Opening a Sound-Books book from browse or search starts playback automatically — zero extra taps, matching LibriVox/YouTube/knigavuhe/4read behavior
-- [ ] **PLAY-02**: Opening a Sound-Books book already in history (resume) auto-plays at the saved position
+- [x] **PLAY-01**: Opening a Sound-Books book from browse or search starts playback automatically — zero extra taps, matching LibriVox/YouTube/knigavuhe/4read behavior
+- [x] **PLAY-02**: Opening a Sound-Books book already in history (resume) auto-plays at the saved position
 - [ ] **PLAY-03**: LibriVox, YouTube, knigavuhe, and 4read auto-play continue to work unchanged (no regression)
-- [ ] **PLAY-04**: The big circle play button on the details screen calls `play()` after `initSongs` (matches `_playChapter` and `_autoPlay` — currently inconsistent)
+- [x] **PLAY-04**: The big circle play button on the details screen calls `play()` after `initSongs` (matches `_playChapter` and `_autoPlay` — currently inconsistent)
 
 ### Play-Init Sequence
 
-- [ ] **PLAY-05**: `MyAudioHandler.initSongs` awaits `ProcessingState.ready` (via `processingStateStream.firstWhere` — BehaviorSubject replays current state, so known-duration sources short-circuit synchronously with zero added latency) before calling `_player.play()`
-- [ ] **PLAY-06**: The await has a bounded timeout (10s); on timeout, emits error state instead of hanging forever
+- [x] **PLAY-05**: `MyAudioHandler.initSongs` awaits `ProcessingState.ready` (via `processingStateStream.firstWhere` — BehaviorSubject replays current state, so known-duration sources short-circuit synchronously with zero added latency) before calling `_player.play()`
+- [x] **PLAY-06**: The await has a bounded timeout (10s); on timeout, emits error state instead of hanging forever
 - [ ] **PLAY-07**: The `finally { _isReinitializing = false; }` block is guarded with `if (myGen == _initGen)` so a stale init doesn't clobber a newer init's flag (precondition — the new await widens the clobber window)
 - [ ] **PLAY-08**: The 60-second fire-and-forget `Future.delayed` listener-cancel (`my_audio_handler.dart:608`) is replaced with a tracked `StreamSubscription` cancelled at the top of the next `initSongs` and in `stop()` (precondition — current code stacks on re-entry)
 - [ ] **PLAY-09**: The orphan `processingStateStream.listen` at `my_audio_handler.dart:611` (logs only, never cancelled) is removed (precondition — leaks a subscription per `initSongs` call)
 
 ### Error Surfacing
 
-- [ ] **ERR-01**: `setAudioSources` is wrapped in try/catch; `PlayerException` from a failed duration probe (404, corrupt MP3, network error) surfaces a user-visible error instead of a silent no-op
-- [ ] **ERR-02**: `_autoPlay` and `_playChapter` in the details screen guard `context` use after `await` with `if (!mounted) return`
+- [x] **ERR-01**: `setAudioSources` is wrapped in try/catch; `PlayerException` from a failed duration probe (404, corrupt MP3, network error) surfaces a user-visible error instead of a silent no-op
+- [x] **ERR-02**: `_autoPlay` and `_playChapter` in the details screen guard `context` use after `await` with `if (!mounted) return`
 
 ### Testability
 
@@ -63,17 +63,17 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| PLAY-01 | Phase 3 | Pending |
-| PLAY-02 | Phase 3 | Pending |
+| PLAY-01 | Phase 3 | Complete |
+| PLAY-02 | Phase 3 | Complete |
 | PLAY-03 | Phase 4 | Pending |
-| PLAY-04 | Phase 3 | Pending |
-| PLAY-05 | Phase 3 | Pending |
-| PLAY-06 | Phase 3 | Pending |
+| PLAY-04 | Phase 3 | Complete |
+| PLAY-05 | Phase 3 | Complete |
+| PLAY-06 | Phase 3 | Complete |
 | PLAY-07 | Phase 2 | Pending |
 | PLAY-08 | Phase 2 | Pending |
 | PLAY-09 | Phase 2 | Pending |
-| ERR-01 | Phase 3 | Pending |
-| ERR-02 | Phase 3 | Pending |
+| ERR-01 | Phase 3 | Complete |
+| ERR-02 | Phase 3 | Complete |
 | TEST-01 | Phase 1 | Complete |
 | TEST-02 | Phase 4 | Pending |
 | TEST-03 | Phase 4 | Pending |
