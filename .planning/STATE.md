@@ -2,19 +2,19 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-current_phase: 01
-status: executing
-stopped_at: Phase 3 context gathered
-last_updated: "2026-07-15T08:45:51.764Z"
-last_activity: 2026-07-14
-last_activity_desc: Phase 01 marked complete
+current_phase: 04
+current_phase_name: call-site-consistency-cross-source-verification
+status: ready
+stopped_at: Phase 03 complete (03-01 executed)
+last_updated: "2026-07-27T14:10:00.000Z"
+last_activity: 2026-07-27
+last_activity_desc: Phase 03 complete — ready-before-play fix verified + summarized
 progress:
   total_phases: 4
-  completed_phases: 1
-  total_plans: 3
-  completed_plans: 2
-  percent: 25
-current_phase_name: diagnostic-verification-test-infrastructure
+  completed_phases: 3
+  total_plans: 4
+  completed_plans: 4
+  percent: 75
 ---
 
 # Project State
@@ -24,16 +24,16 @@ current_phase_name: diagnostic-verification-test-infrastructure
 See: .planning/PROJECT.md (updated 2026-07-14)
 
 **Core value:** Tap a book from any source and it plays — discover to playback in one gesture.
-**Current focus:** Phase 01 — diagnostic-verification-test-infrastructure
+**Current focus:** Phase 04 — call-site-consistency-cross-source-verification
 
 ## Current Position
 
-Phase: 01 — COMPLETE
-Plan: 2 of 2
-Status: Ready to execute
-Last activity: 2026-07-14 — Phase 01 marked complete
+Phase: 03 (ready-before-play-fix) — COMPLETE
+Plan: 1 of 1
+Status: Phase 03 complete; ready for Phase 04
+Last activity: 2026-07-27 — Phase 03 plan 03-01 executed, SUMMARY authored, tracking updated
 
-Progress: [█████░░░░░] 50%
+Progress: [███████░░░] 75%
 
 ## Performance Metrics
 
@@ -72,6 +72,10 @@ Recent decisions affecting current work:
 - [Phase 01]: Did NOT fix 2 pre-existing chapter-switching-metadata test failures — verified pre-existing via git stash on clean baseline; out of scope per deviation rule; logged to deferred-items.md — 01-01: pre-existing failures out of scope — would mask future regressions but unrelated to Sound-Books race
 - [Phase ?]: macOS diagnostic: race confirmed (play during buffering 4/5 books), audio plays on macOS, audioSession.setActive reversion unconfirmed (Android-specific)
 - [Phase ?]: Phase 3 fix layer: ready-before-play await correct — eliminates race on all platforms
+- [Phase 03]: D-01 through D-12 implemented exactly as locked — await processingStateStream.firstWhere(ready).timeout(10s) before play(); BehaviorSubject replay gives zero-latency for known-duration sources; Sound-Books waits until ready or 10s
+- [Phase 03]: Phase 2 _initSettleSub listener machinery superseded and removed — the one-shot firstWhere replaces the tracked subscription; cancel sites + bufferingStarted local deleted
+- [Phase 03]: Big play button made explicit (playImmediately:false + await play()) rather than relying on internal mechanism — clearer intent, testable
+- [Phase 03]: All three call sites (_playChapter, _autoPlay, big button) now share the canonical caller-catches + mounted guard + SnackBar pattern
 
 ### Pending Todos
 
@@ -99,6 +103,6 @@ Items acknowledged and carried forward (v2 / out-of-scope):
 
 ## Session Continuity
 
-Last session: 2026-07-15T08:45:51.758Z
-Stopped at: Phase 3 context gathered
-Resume file: .planning/phases/03-ready-before-play-fix/03-CONTEXT.md
+Last session: 2026-07-27T14:10:00.000Z
+Stopped at: Phase 03 complete — ready-before-play fix executed, verified, summarized
+Resume file: .planning/phases/03-ready-before-play-fix/03-01-SUMMARY.md

@@ -14,8 +14,8 @@ Fix the one source (Sound-Books) whose books don't auto-play on open. The bug li
 Decimal phases appear between their surrounding integers in numeric order.
 
 - [x] **Phase 1: Diagnostic Verification + Test Infrastructure** - Confirm failure mechanism on-device; extend FakePlaybackEngine so the race is reproducible in tests (completed 2026-07-14)
-- [ ] **Phase 2: Subscription Lifecycle + State-Guard Cleanup** - Pure refactors: tracked subscriptions, gen-guarded finally, orphan-listener removal (no behavior change)
-- [ ] **Phase 3: Ready-Before-Play Fix** - Restructure initSongs to await ready before play(); bounded timeout + error surfacing (THE fix)
+- [x] **Phase 2: Subscription Lifecycle + State-Guard Cleanup** - Pure refactors: tracked subscriptions, gen-guarded finally, orphan-listener removal (no behavior change) (completed 2026-07-15)
+- [x] **Phase 3: Ready-Before-Play Fix** - Restructure initSongs to await ready before play(); bounded timeout + error surfacing (THE fix) (completed 2026-07-27)
 - [ ] **Phase 4: Call-Site Consistency + Cross-Source Verification** - Big play button 2-line fix + manual smoke across all 5 sources + lock invariants in tests
 
 ## Phase Details
@@ -55,11 +55,11 @@ Plans:
   2. Rapidly switching book A → book B mid-load leaves `_isReinitializing` correctly set for the active init (book B), not clobbered by book A's stale `finally` block — opening book C immediately after behaves correctly.
   3. Opening any source's book plays exactly as before — users observe zero behavior change (the refactors are invisible); `playback_trust_test.dart` continues to pass.
 
-**Plans**: TBD
+**Plans**: 1/1 plans complete
 
 Plans:
 
-- [ ] 02-01: TBD
+- [x] 02-01-PLAN.md — Subscription lifecycle + state-guard cleanup (gen-guarded finally, tracked StreamSubscription, orphan-listener removal)
 
 ### Phase 3: Ready-Before-Play Fix
 
@@ -75,12 +75,12 @@ Plans:
   4. When a Sound-Books URL fails (404, corrupt MP3, network drop), the user sees a visible error message (SnackBar) instead of a silent no-op.
   5. Backing out of the details screen during the Sound-Books duration probe does not crash the app — `mounted` guards prevent `context` use after dispose.
 
-**Plans**: TBD
+**Plans**: 1/1 plans complete
 **UI hint**: yes
 
 Plans:
 
-- [ ] 03-01: TBD
+- [x] 03-01-PLAN.md — Ready-before-play gate in initSongs (await ProcessingState.ready + 10s timeout) + call-site consistency + error surfacing + test updates
 
 ### Phase 4: Call-Site Consistency + Cross-Source Verification
 
@@ -109,6 +109,6 @@ Phases execute in numeric order: 1 → 2 → 3 → 4
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Diagnostic Verification + Test Infrastructure | 2/2 | Complete   | 2026-07-14 |
-| 2. Subscription Lifecycle + State-Guard Cleanup | 0/1 | Not started | - |
-| 3. Ready-Before-Play Fix | 0/1 | Not started | - |
+| 2. Subscription Lifecycle + State-Guard Cleanup | 1/1 | Complete | 2026-07-15 |
+| 3. Ready-Before-Play Fix | 1/1 | Complete | 2026-07-27 |
 | 4. Call-Site Consistency + Cross-Source Verification | 0/1 | Not started | - |
