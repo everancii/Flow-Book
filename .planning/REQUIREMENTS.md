@@ -18,9 +18,9 @@ Requirements for this milestone. Each maps to roadmap phases.
 
 - [x] **PLAY-05**: `MyAudioHandler.initSongs` awaits `ProcessingState.ready` (via `processingStateStream.firstWhere` — BehaviorSubject replays current state, so known-duration sources short-circuit synchronously with zero added latency) before calling `_player.play()`
 - [x] **PLAY-06**: The await has a bounded timeout (10s); on timeout, emits error state instead of hanging forever
-- [ ] **PLAY-07**: The `finally { _isReinitializing = false; }` block is guarded with `if (myGen == _initGen)` so a stale init doesn't clobber a newer init's flag (precondition — the new await widens the clobber window)
-- [ ] **PLAY-08**: The 60-second fire-and-forget `Future.delayed` listener-cancel (`my_audio_handler.dart:608`) is replaced with a tracked `StreamSubscription` cancelled at the top of the next `initSongs` and in `stop()` (precondition — current code stacks on re-entry)
-- [ ] **PLAY-09**: The orphan `processingStateStream.listen` at `my_audio_handler.dart:611` (logs only, never cancelled) is removed (precondition — leaks a subscription per `initSongs` call)
+- [x] **PLAY-07**: The `finally { _isReinitializing = false; }` block is guarded with `if (myGen == _initGen)` so a stale init doesn't clobber a newer init's flag (precondition — the new await widens the clobber window) — *Verified in Phase 2; retained through Phase 3 (`my_audio_handler.dart:616-622`)*
+- [x] **PLAY-08**: The 60-second fire-and-forget `Future.delayed` listener-cancel (`my_audio_handler.dart:608`) is replaced with a tracked `StreamSubscription` cancelled at the top of the next `initSongs` and in `stop()` — *Landed in Phase 2 (commit `351a75d`); then SUPERSEDED in Phase 3 D-03/D-04 — the `_initSettleSub` field was removed entirely because `firstWhere(ready).timeout(10s)` is a one-shot future with no subscription to track. The leak class is structurally eliminated. See 02-VERIFICATION.md.*
+- [x] **PLAY-09**: The orphan `processingStateStream.listen` at `my_audio_handler.dart:611` (logs only, never cancelled) is removed (precondition — leaks a subscription per `initSongs` call) — *Verified: `grep -n "processingStateStream.listen"` returns no matches in my_audio_handler.dart*
 
 ### Error Surfacing
 
@@ -69,9 +69,9 @@ Which phases cover which requirements. Updated during roadmap creation.
 | PLAY-04 | Phase 3 | Complete |
 | PLAY-05 | Phase 3 | Complete |
 | PLAY-06 | Phase 3 | Complete |
-| PLAY-07 | Phase 2 | Pending |
-| PLAY-08 | Phase 2 | Pending |
-| PLAY-09 | Phase 2 | Pending |
+| PLAY-07 | Phase 2 | Complete (retained through Phase 3) |
+| PLAY-08 | Phase 2 | Complete (landed P2, superseded by Phase 3 D-03/D-04 — see 02-VERIFICATION.md) |
+| PLAY-09 | Phase 2 | Complete |
 | ERR-01 | Phase 3 | Complete |
 | ERR-02 | Phase 3 | Complete |
 | TEST-01 | Phase 1 | Complete |
