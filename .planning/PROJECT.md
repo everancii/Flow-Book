@@ -67,9 +67,9 @@ Other sources don't hit this because their durations are known up front, so `set
 
 | Decision | Rationale | Outcome |
 |----------|-----------|---------|
-| Fix lives in `MyAudioHandler.initSongs` play sequence, not in the details screen | The race is in the shared play-init logic; the details-screen `_autoPlay` already calls `play()` correctly — the drop happens deeper | — Pending |
-| Sound-Books is the only affected source (confirmed by user) | Other sources return durations in their API responses; only Sound-Books m3u has `length: 0` forcing a network probe | — Pending |
-| Keep the details screen in the flow | User wants to "open book and it starts playing" — opening the details screen is desired, just wants auto-play to work | — Pending |
+| Fix lives in `MyAudioHandler.initSongs` play sequence, not in the details screen | The race is in the shared play-init logic; the details-screen `_autoPlay` already calls `play()` correctly — the drop happens deeper | ✓ Validated in Phase 3: `await ProcessingState.ready` gate in initSongs; race detector un-skipped and passing |
+| Sound-Books is the only affected source (confirmed by user) | Other sources return durations in their API responses; only Sound-Books m3u has `length: 0` forcing a network probe | ✓ Validated in Phase 1 diagnostic (4/5 Sound-Books books confirmed race on macOS); fix landed in Phase 3 |
+| Keep the details screen in the flow | User wants to "open book and it starts playing" — opening the details screen is desired, just wants auto-play to work | ✓ Validated in Phase 3: big play button, `_autoPlay`, `_playChapter` all consistent (playImmediately:true) |
 
 ## Evolution
 
