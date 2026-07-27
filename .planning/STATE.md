@@ -2,19 +2,19 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-current_phase: 4
-current_phase_name: Call-Site Consistency + Cross-Source Verification
+current_phase: 04
+current_phase_name: call-site-consistency-cross-source-verification
 status: executing
-stopped_at: Phase 4 context gathered
-last_updated: "2026-07-27T22:15:10.192Z"
+stopped_at: Phase 04 plan 01 complete — pending PLAY-03 manual UAT sign-off
+last_updated: "2026-07-27T22:26:00.000Z"
 last_activity: 2026-07-27
-last_activity_desc: Phase 03 complete, transitioned to Phase 4
+last_activity_desc: Phase 04 plan 01 executed (history_section hardened, TEST-02 18/18, 04-UAT.md captured)
 progress:
   total_phases: 4
   completed_phases: 3
-  total_plans: 4
-  completed_plans: 4
-  percent: 75
+  total_plans: 5
+  completed_plans: 5
+  percent: 100
 ---
 
 # Project State
@@ -28,12 +28,12 @@ See: .planning/PROJECT.md (updated 2026-07-14)
 
 ## Current Position
 
-Phase: 4 — Call-Site Consistency + Cross-Source Verification
-Plan: Not started
-Status: Ready to execute
-Last activity: 2026-07-27 — Phase 03 complete, transitioned to Phase 4
+Phase: 04 (call-site-consistency-cross-source-verification) — Plan 1 of 1 complete (code); pending PLAY-03 manual UAT sign-off
+Plan: 1 of 1 complete
+Status: Phase 04 plan 01 executed; awaiting on-device PLAY-03 smoke (04-UAT.md)
+Last activity: 2026-07-27 — Phase 04 plan 01 executed (history_section hardened, TEST-02 18/18, 04-UAT.md captured)
 
-Progress: [███████░░░] 75%
+Progress: [██████████] 100%
 
 ## Performance Metrics
 
@@ -76,6 +76,8 @@ Recent decisions affecting current work:
 - [Phase 03]: Phase 2 _initSettleSub listener machinery superseded and removed — the one-shot firstWhere replaces the tracked subscription; cancel sites + bufferingStarted local deleted
 - [Phase 03]: Big play button made explicit (playImmediately:false + await play()) rather than relying on internal mechanism — clearer intent, testable
 - [Phase 03]: All three call sites (_playChapter, _autoPlay, big button) now share the canonical caller-catches + mounted guard + SnackBar pattern
+- [Phase 04]: D-01 through D-07 implemented exactly as locked — history_section.dart onTap hardened to the canonical _autoPlay pattern (async try/catch + await + mounted guard + SnackBar); all 4 Hive writes relocated before the await (D-03 race avoidance); all four user-facing play-init call sites now consistent; mini_audio_player.dart left untouched (D-05)
+- [Phase 04]: TEST-02 stays 18/18; TEST-03 satisfied (2 landed invariant tests pass + 4 N/A confirmed via _initSettleSub grep=0); PLAY-03 captured as 04-UAT.md manual smoke (8-row matrix, <100ms pass bar, dead-URL error-path check) — pending user sign-off on real device
 
 ### Pending Todos
 
@@ -103,6 +105,6 @@ Items acknowledged and carried forward (v2 / out-of-scope):
 
 ## Session Continuity
 
-Last session: 2026-07-27T14:15:42.369Z
-Stopped at: Phase 4 context gathered
-Resume file: .planning/phases/04-call-site-consistency-cross-source-verification/04-CONTEXT.md
+Last session: 2026-07-27T22:26:00.000Z
+Stopped at: Phase 04 plan 01 complete — pending PLAY-03 manual UAT sign-off
+Resume file: .planning/phases/04-call-site-consistency-cross-source-verification/04-UAT.md

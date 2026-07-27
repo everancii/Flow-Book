@@ -16,7 +16,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 1: Diagnostic Verification + Test Infrastructure** - Confirm failure mechanism on-device; extend FakePlaybackEngine so the race is reproducible in tests (completed 2026-07-14)
 - [x] **Phase 2: Subscription Lifecycle + State-Guard Cleanup** - Pure refactors: tracked subscriptions, gen-guarded finally, orphan-listener removal (no behavior change) (completed 2026-07-15)
 - [x] **Phase 3: Ready-Before-Play Fix** - Restructure initSongs to await ready before play(); bounded timeout + error surfacing (THE fix) (completed 2026-07-27)
-- [ ] **Phase 4: Call-Site Consistency + Cross-Source Verification** - Big play button 2-line fix + manual smoke across all 5 sources + lock invariants in tests
+- [x] **Phase 4: Call-Site Consistency + Cross-Source Verification** - History-tap hardening (call-site consistency) + manual smoke across all 5 sources + verify TEST-02/TEST-03 (code complete 2026-07-27; PLAY-03 manual UAT pending)
 
 ## Phase Details
 
@@ -95,11 +95,11 @@ Plans:
   3. New automated tests cover and pass: ready-before-play ordering, loading-state wait, gen-discard during wait, timeout fallback, tracked-subscription cancellation, and no orphan listeners.
   4. Manual smoke on a real device across all 5 sources confirms: Sound-Books auto-play on open, Sound-Books resume from history, Sound-Books big play button, Sound-Books chapter-list tap, and the other 4 sources' auto-play unchanged.
 
-**Plans**: TBD
+**Plans**: 1/1 plans complete (code); PLAY-03 manual UAT pending user sign-off
 
 Plans:
 
-- [ ] 04-01: TBD
+- [x] 04-01-PLAN.md — History-section onTap hardening (async try/catch + race-safe Hive writes, matching _autoPlay) + verify TEST-02 (18/18) + TEST-03 (2 landed + 4 N/A) + capture PLAY-03 as 04-UAT.md (8-row manual smoke)
 
 ## Progress
 
@@ -111,4 +111,4 @@ Phases execute in numeric order: 1 → 2 → 3 → 4
 | 1. Diagnostic Verification + Test Infrastructure | 2/2 | Complete   | 2026-07-14 |
 | 2. Subscription Lifecycle + State-Guard Cleanup | 1/1 | Complete | 2026-07-15 |
 | 3. Ready-Before-Play Fix | 1/1 | Complete    | 2026-07-27 |
-| 4. Call-Site Consistency + Cross-Source Verification | 0/1 | Not started | - |
+| 4. Call-Site Consistency + Cross-Source Verification | 1/1 | Code complete (PLAY-03 manual UAT pending) | 2026-07-27 |
