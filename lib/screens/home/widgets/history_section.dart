@@ -3,6 +3,7 @@ import 'package:audiobookflow/resources/models/audiobook_file.dart';
 import 'package:audiobookflow/resources/models/history_of_audiobook.dart';
 import 'package:audiobookflow/resources/services/audio_handler_provider.dart';
 import 'package:audiobookflow/resources/services/local/cover_image_service.dart';
+import 'package:audiobookflow/utils/app_logger.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:hive/hive.dart';
@@ -152,31 +153,43 @@ class _HistorySectionState extends State<HistorySection> {
       width: 175,
       padding: const EdgeInsets.only(right: 8),
       child: GestureDetector(
-        onTap: () {
+        onTap: () async {
           if (audioHandlerProvider.audioHandler.getCurrentAudiobookId() ==
               item.audiobook.id) {
             _weSlideController.show();
             return;
           }
 
-          playingAudiobookDetailsBox.put('audiobook', item.audiobook.toMap());
-          playingAudiobookDetailsBox.put(
-            'audiobookFiles',
-            item.audiobookFiles.map((e) => e.toMap()).toList(),
-          );
+          try {
+            final hist =
+                historyOfAudiobook.getHistoryOfAudiobookItem(item.audiobook.id);
 
-          final hist =
-              historyOfAudiobook.getHistoryOfAudiobookItem(item.audiobook.id);
-          audioHandlerProvider.audioHandler.initSongs(
-            item.audiobookFiles,
-            item.audiobook,
-            hist.index,
-            hist.position,
-          );
-          playingAudiobookDetailsBox.put('index', hist.index);
-          playingAudiobookDetailsBox.put('position', hist.position);
+            // Write all Hive values synchronously before any await to avoid
+            // a race where MiniAudioPlayer.didChangeDependencies reads a
+            // partially-updated box (new audiobook, old files / index).
+            playingAudiobookDetailsBox.put('audiobook', item.audiobook.toMap());
+            playingAudiobookDetailsBox.put(
+              'audiobookFiles',
+              item.audiobookFiles.map((e) => e.toMap()).toList(),
+            );
+            playingAudiobookDetailsBox.put('index', hist.index);
+            playingAudiobookDetailsBox.put('position', hist.position);
 
-          _weSlideController.show();
+            await audioHandlerProvider.audioHandler.initSongs(
+              item.audiobookFiles,
+              item.audiobook,
+              hist.index,
+              hist.position,
+            );
+            _weSlideController.show();
+          } catch (e) {
+            AppLogger.debug('Error resuming audiobook from history: $e');
+            if (!mounted) return;
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                  content: Text('Unable to start playback. Please try again.')),
+            );
+          }
         },
         onLongPress: () {
           showDialog(
