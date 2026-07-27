@@ -2,7 +2,7 @@
 
 ## What This Is
 
-Flow Book (`audiobookflow`) is a Flutter audiobook player that aggregates five audio sources (Librivox/Archive.org, YouTube, 4read, knigavuhe, Sound-Books) plus local/downloaded files into one browsing + playback experience. Targets Android and macOS. Already shipped as v1.2.0+2020 via GitHub Releases.
+Flow Book (`audiobookflow`) is a Flutter audiobook player that aggregates five audio sources (Librivox/Archive.org, YouTube, 4read, knigavuhe, Sound-Books) plus local/downloaded files into one browsing + playback experience. Targets Android and macOS. Already shipped as v1.2.0+2020 via GitHub Releases. **Milestone v1.0 (Sound-Books Auto-Play Fix) complete** — opening any book from any source now auto-plays in one gesture.
 
 ## Core Value
 
@@ -97,4 +97,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-07-14 after initialization*
+*Last updated: 2026-07-28 after v1.0 milestone (Sound-Books Auto-Play Fix)*

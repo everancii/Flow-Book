@@ -2,19 +2,19 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-current_phase: 04
-current_phase_name: call-site-consistency-cross-source-verification
-status: Phase 04 plan 01 executed; awaiting on-device PLAY-03 smoke (04-UAT.md)
+current_phase: 0
+status: Awaiting next milestone
 stopped_at: Phase 04 plan 01 complete — pending PLAY-03 manual UAT sign-off
-last_updated: "2026-07-27T22:31:49.630Z"
+last_updated: "2026-07-27T22:44:11.901Z"
 last_activity: 2026-07-27
-last_activity_desc: Phase 04 complete
+last_activity_desc: Milestone v1.0 completed and archived
 progress:
   total_phases: 4
   completed_phases: 4
   total_plans: 5
   completed_plans: 5
   percent: 100
+current_phase_name: call-site-consistency-cross-source-verification
 ---
 
 # Project State
@@ -28,12 +28,10 @@ See: .planning/PROJECT.md (updated 2026-07-14)
 
 ## Current Position
 
-Phase: 04 of 1 (call-site-consistency-cross-source-verification)
-Plan: Not started
-Status: Phase 04 plan 01 executed; awaiting on-device PLAY-03 smoke (04-UAT.md)
-Last activity: 2026-07-27 — Phase 04 complete
-
-Progress: [██████████] 100%
+Phase: Milestone v1.0 complete
+Plan: —
+Status: Awaiting next milestone
+Last activity: 2026-07-27 — Milestone v1.0 completed and archived
 
 ## Performance Metrics
 
@@ -109,3 +107,7 @@ Items acknowledged and carried forward (v2 / out-of-scope):
 Last session: 2026-07-27T22:26:00.000Z
 Stopped at: Phase 04 plan 01 complete — pending PLAY-03 manual UAT sign-off
 Resume file: .planning/phases/04-call-site-consistency-cross-source-verification/04-UAT.md
+
+## Operator Next Steps
+
+- Start the next milestone with /gsd-new-milestone
