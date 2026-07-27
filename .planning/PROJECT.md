@@ -27,7 +27,15 @@ Tap a book from any source and it plays — discover to playback in one gesture.
 
 ### Active
 
-- [ ] Opening a Sound-Books book starts playback automatically — no play button press required (matches LibriVox/YouTube/knigavuhe/4read behavior)
+(None — all milestone v1.0 work validated.)
+
+### Validated This Milestone (v1.0 — Sound-Books Auto-Play Fix)
+
+- ✓ **PLAY-01/02** (Phase 3): Opening a Sound-Books book auto-plays on open and from history at saved position — `await ProcessingState.ready` gate in `initSongs` replaces fire-and-forget `play()`
+- ✓ **PLAY-04/05/06** (Phase 3): Big play button consistent with `_autoPlay`/`_playChapter`; bounded 10s timeout with SnackBar error surfacing; gen-guarded stale-init protection
+- ✓ **ERR-01/02** (Phase 3 + 4): `setAudioSources` failures and ready-await timeouts surface as user-visible SnackBars; all call sites have `if (!mounted) return` guards
+- ✓ **PLAY-03/TEST-02/TEST-03** (Phase 4): Call-site consistency closed (all 4 user-facing play-init sites share the canonical pattern, including the 4th — history-tap); `playback_trust_test.dart` green at 18/18; invariant tests landed (gen-discard + timeout fallback; 2 N/A after `_initSettleSub` removal)
+- ◷ **PLAY-03 on-device smoke** (Phase 4 UAT): Captured in `04-UAT.md` — user runs manual smoke across all 5 sources before release
 
 ### Out of Scope
 
