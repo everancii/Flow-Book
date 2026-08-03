@@ -30,18 +30,22 @@
 **Milestone Goal:** After quitting the app and returning to the last-played book, pressing play resumes at the saved position *and* the progress bar reflects that position correctly from the first frame.
 
 #### Phase 5: Cold-Restore Position-Stream Bridge Fix
+
 **Goal**: Fix the position-stream bridge between the forked just_audio's deferred-load path and the UI's `ProgressBarWidget` so the progress bar reflects the restored position immediately after cold-restore + play.
 **Depends on**: Phase 4 (v1.0 complete; shared `initSongs` / `play()` / `getPositionStream()` code is stable)
 **Requirements**: RESTORE-01
 **Mode**: standard
 **Success Criteria** (what must be TRUE):
+
   1. After quitting and returning to the last-played book, pressing play shows the progress bar at the saved position (not 0:00) within 1 second of playback starting — for every source whose audio already restores correctly today (LibriVox, YouTube, 4read, knigavuhe, Sound-Books, local/download).
   2. The total duration and remaining-time label render correct non-zero values after cold-restore + play.
   3. Dragging the progress bar to seek still works correctly after a cold-restore + play (no jump-back, no stuck thumb).
   4. `playback_trust_test.dart` stays green — including the `playImmediately: false` "NO seek before deferred load" invariant and the restore test.
-**Plans**: 1 plan
+
+**Plans**: 0/1 plans executed
 
 Plans:
+
 - [ ] 05-01: Diagnose deferred-load position-stream gap, fix the bridge, add regression test
 
 ## Progress
@@ -55,4 +59,4 @@ Phases execute in numeric order. v1.0 (1-4) shipped; v1.1 continues at Phase 5.
 | 2. Subscription Lifecycle + State-Guard Cleanup | v1.0 | 1/1 | Complete | 2026-07-15 |
 | 3. Ready-Before-Play Fix | v1.0 | 1/1 | Complete | 2026-07-27 |
 | 4. Call-Site Consistency + Cross-Source Verification | v1.0 | 1/1 | Complete | 2026-07-28 |
-| 5. Cold-Restore Position-Stream Bridge Fix | v1.1 | 0/1 | Not started | - |
+| 5. Cold-Restore Position-Stream Bridge Fix | v1.1 | 0/1 | Planned    |  |
