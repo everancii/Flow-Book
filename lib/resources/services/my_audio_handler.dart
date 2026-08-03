@@ -74,6 +74,20 @@ abstract class PlaybackEngine {
   Future<void> setSkipSilenceEnabled(bool skipSilence);
   Future<void> setBalance(double balance);
   Future<void> setPitch(double pitch);
+
+  /// Re-emits the engine's current position + bufferedPosition onto its
+  /// position/bufferedPosition streams.
+  ///
+  /// Used by the position-stream bridge after the forked just_audio's
+  /// deferred-load path resolves on play() (05-CONTEXT.md D-04b): the fork
+  /// applies initialSeekValues and resolves the duration probe on play(), but
+  /// `Rx.combineLatest3` in `getPositionStream()` only re-fires when one of
+  /// the three underlying streams re-emits. A fresh `getPositionStream()`
+  /// subscription (ProgressBarWidget rebuilds on each build) also needs all
+  /// three to emit at least once. This call forces that re-emission so the
+  /// progress bar reflects the restored position + resolved duration
+  /// immediately after cold-restore + play.
+  void emitPositionState();
 }
 
 class JustAudioPlaybackEngine implements PlaybackEngine {
@@ -186,6 +200,17 @@ class JustAudioPlaybackEngine implements PlaybackEngine {
 
   @override
   Future<void> setPitch(double pitch) => _player.setPitch(pitch);
+
+  @override
+  void emitPositionState() {
+    // No-op for the real just_audio player: after the forked deferred-load
+    // path resolves on play(), the real engine re-emits position/
+    // bufferedPosition on its periodic streams (~200ms) and resolves the
+    // duration probe. The production D-04b fresh-subscription gap is closed
+    // by the position-seed in getPositionStream() (see the Rx.startWith
+    // transformer below), not by pushing into the player's internal sinks.
+    // FakePlaybackEngine overrides this to drive its broadcast controllers.
+  }
 }
 
 class MyAudioHandler extends BaseAudioHandler {
@@ -783,10 +808,26 @@ class MyAudioHandler extends BaseAudioHandler {
   }
 
   Stream<PositionData> getPositionStream() {
+    // D-04a/D-04b cold-restore fix (05-CONTEXT.md D-08, fork ref a6f8db8):
+    // Rx.combineLatest3 only emits once all three upstream streams have each
+    // emitted at least once, and only re-emits when one of them re-emits.
+    // ProgressBarWidget rebuilds on every frame and calls getPositionStream()
+    // fresh each time, so a fresh combineLatest3 subscription would otherwise
+    // wait for position/buffered/currentIndex to re-emit — which on the
+    // deferred-load path does NOT happen until after play() resolves the
+    // native load (D-04b). Even then, currentIndex often does not change, so
+    // the fresh subscription never fires.
+    //
+    // Seed each upstream with its current restored value via Rx.startWith so
+    // any fresh subscription emits immediately with the live position +
+    // bufferedPosition + currentIndex (all correct after the deferred load
+    // resolves). This closes both D-04b (combineLatest3 never fires on a
+    // fresh subscription) and keeps the bar renderable during the brief
+    // duration-probe lag.
     return Rx.combineLatest3<Duration, Duration, int?, PositionData>(
-      _player.positionStream,
-      _player.bufferedPositionStream,
-      _player.currentIndexStream,
+      _player.positionStream.startWith(_player.position),
+      _player.bufferedPositionStream.startWith(_player.bufferedPosition),
+      _player.currentIndexStream.startWith(_player.currentIndex),
       (position, bufferedPosition, index) {
         final currentSequence = _player.sequence;
 
@@ -797,6 +838,10 @@ class MyAudioHandler extends BaseAudioHandler {
               Duration(milliseconds: item?.extras?['durationMs'] as int? ?? 0);
 
           // Use player's actual duration as primary, fallback to metadata
+          // (D-04a: _player.duration may still be null right after the
+          // deferred load resolves while the duration probe settles — fall
+          // back to the MediaItem's metadata durationMs so the bar renders a
+          // non-zero total instead of Duration.zero).
           final trackDuration = _player.duration != null &&
                   _player.duration! > Duration.zero
               ? _player.duration!
@@ -852,6 +897,18 @@ class MyAudioHandler extends BaseAudioHandler {
     await _restoreQueueFromBoxIfEmpty(); // only at cold start
 
     await _player.play();
+
+    // D-08 position-stream bridge (05-CONTEXT.md D-04a/D-04b, fork ref
+    // a6f8db8): after the forked just_audio's deferred-load path resolves on
+    // _player.play(), the restored position + resolved duration are now
+    // correct in the engine getters. Re-emit position/bufferedPosition so
+    // any existing getPositionStream() combineLatest3 subscription re-fires
+    // with the restored values. (Fresh subscriptions are already covered by
+    // the Rx.startWith seeds in getPositionStream.) NO seek is issued here
+    // — the deferred load already applied initialSeekValues, and a seek
+    // would wipe them (D-05). This only nudges the stream; it does not move
+    // the playhead.
+    _player.emitPositionState();
 
     _broadcastState(_player.playbackEvent);
   }

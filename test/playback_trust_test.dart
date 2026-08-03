@@ -869,6 +869,16 @@ class FakePlaybackEngine implements PlaybackEngine {
     playing = false;
     playingStates.add(false);
   }
+
+  @override
+  void emitPositionState() {
+    // D-08 bridge: re-emit the engine's current position + bufferedPosition
+    // so getPositionStream()'s combineLatest3 re-fires after play() resolves
+    // the deferred load. Mirrors MyAudioHandler.play() calling this to nudge
+    // existing stream subscriptions.
+    positions.add(position);
+    bufferedPositions.add(bufferedPosition);
+  }
 }
 
 class SetAudioSourcesCall {
