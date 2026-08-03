@@ -691,22 +691,42 @@ class FakePlaybackEngine implements PlaybackEngine {
   int stopCount = 0;
   int pauseCount = 0;
 
-  // D-10: Deferred-load mode mirroring the forked just_audio preload:false
-  // semantics (fork ref a6f8db8). When true, setAudioSources records the
-  // initial index/position/sequence into the fake's state but does NOT emit
-  // the restored position on positionStream and leaves `duration` null —
-  // mirroring how the fork defers the native load until play(). The deferred
-  // load is then "resolved" by play(), which applies initialSeekValues
-  // (restored position) and resolves the duration probe. The synchronous-
-  // emission fake (the default) masks the cold-restore progress-bar bug
-  // (see 05-CONTEXT.md D-10); this deferred mode surfaces it so the
-  // regression test can exercise the gap.
+  // ──────────────────────────────────────────────────────────────────────
+  // D-10 deferred-load mode (mirrors forked just_audio preload:false)
+  // ──────────────────────────────────────────────────────────────────────
+  // The synchronous-emission FakePlaybackEngine (the default, used by the 18
+  // pre-existing tests) emits the restored position on positionStream and a
+  // non-zero duration synchronously inside setAudioSources. That contract
+  // MASKS the cold-restore progress-bar bug: the forked just_audio
+  // (sagarchaulagai/just_audio.git @ a6f8db8, see 05-CONTEXT.md D-10) does
+  // NOT do that on the preload:false (playImmediately:false) path. Instead
+  // the fork records initialIndex/initialPosition in
+  // _pluginLoadRequest.initialSeekValues and defers the native load until
+  // play(); the restored position is only re-emitted and the duration probe
+  // only resolved once play() applies initialSeekValues.
+  //
+  // This deferred mode (deferPositionEmission = true) makes the fake mirror
+  // that forked semantics so the RESTORE-01 regression test can exercise the
+  // gap the synchronous fake used to hide:
+  //   - setAudioSources(preload:false) sets deferPositionEmission = true,
+  //     records index/position/sequence, but suppresses positions.add and
+  //     nulls the live duration getter (so getPositionStream()'s live
+  //     _player.duration probe sees null — D-04a).
+  //   - play() resolves the deferred load: restores a non-zero duration,
+  //     re-emits the stored position on positions + bufferedPositions, and
+  //     resets the flag — mirroring the fork applying initialSeekValues and
+  //     resolving the duration probe on play().
+  // The default synchronous path (preload:true, or any call site that does
+  // not set preload:false) is unchanged, so the 18 pre-existing tests pass
+  // byte-for-byte. See the RESTORE-01 regression test below for the RED→GREEN
+  // spec, and MyAudioHandler.getPositionStream() / play() for the D-08 fix.
   bool deferPositionEmission = false;
 
-  // D-10: The non-zero duration the fake "resolves" once the deferred native
-  // load completes on play(). Kept separate from the live `duration` getter
+  // The non-zero duration the fake "resolves" once the deferred native load
+  // completes on play(). Kept separate from the live `duration` getter
   // (which stays null during the deferred window) so the position-stream
-  // bridge's live `_player.duration` probe sees null until play() resolves.
+  // bridge's live `_player.duration` probe sees null until play() resolves —
+  // exercising the D-04a branch before the fix widens its fallback.
   static final _resolvedDuration = Duration(minutes: 5);
 
   @override
