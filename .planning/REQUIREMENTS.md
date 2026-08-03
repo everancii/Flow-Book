@@ -38,7 +38,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| RESTORE-01 | Phase 5 | Pending |
+| RESTORE-01 | Phase 5 | Pending (roadmap approved) |
 
 **Coverage:**
 - v1.1 requirements: 1 total
