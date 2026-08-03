@@ -9,7 +9,7 @@ Requirements for milestone v1.1. Single-category, single-requirement fix.
 
 ### Restore & Position-Stream Bridge
 
-- [ ] **RESTORE-01**: After quitting the app and returning to the last-played book, pressing play resumes at the saved position **and the progress bar (position thumb, total duration, and remaining-time label) reflects the restored position correctly within the first second of playback** — for all sources whose audio already restores correctly today.
+- [x] **RESTORE-01**: After quitting the app and returning to the last-played book, pressing play resumes at the saved position **and the progress bar (position thumb, total duration, and remaining-time label) reflects the restored position correctly within the first second of playback** — for all sources whose audio already restores correctly today.
 
 ## Future Requirements
 
@@ -41,6 +41,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | RESTORE-01 | Phase 5 | Pending (roadmap approved) |
 
 **Coverage:**
+
 - v1.1 requirements: 1 total
 - Mapped to phases: 1
 - Unmapped: 0 ✓
