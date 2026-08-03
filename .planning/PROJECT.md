@@ -2,7 +2,7 @@
 
 ## What This Is
 
-Flow Book (`audiobookflow`) is a Flutter audiobook player that aggregates five audio sources (Librivox/Archive.org, YouTube, 4read, knigavuhe, Sound-Books) plus local/downloaded files into one browsing + playback experience. Targets Android and macOS. Already shipped as v1.2.0+2020 via GitHub Releases. **Milestone v1.0 (Sound-Books Auto-Play Fix) complete** — opening any book from any source now auto-plays in one gesture.
+Flow Book (`audiobookflow`) is a Flutter audiobook player that aggregates five audio sources (Librivox/Archive.org, YouTube, 4read, knigavuhe, Sound-Books) plus local/downloaded files into one browsing + playback experience. Targets Android and macOS. Already shipped as v1.2.0+2020 via GitHub Releases. **Milestone v1.0 (Sound-Books Auto-Play Fix) complete** — opening any book from any source now auto-plays in one gesture. **Milestone v1.1 (Cold-Restore Progress Bar Fix) in progress** — after quitting and returning, the progress bar must reflect the restored position from the first frame.
 
 ## Core Value
 
@@ -29,20 +29,42 @@ Tap a book from any source and it plays — discover to playback in one gesture.
 
 (None — all milestone v1.0 work validated.)
 
-### Validated This Milestone (v1.0 — Sound-Books Auto-Play Fix)
+## Current Milestone: v1.1 Cold-Restore Progress Bar Fix
 
-- ✓ **PLAY-01/02** (Phase 3): Opening a Sound-Books book auto-plays on open and from history at saved position — `await ProcessingState.ready` gate in `initSongs` replaces fire-and-forget `play()`
-- ✓ **PLAY-04/05/06** (Phase 3): Big play button consistent with `_autoPlay`/`_playChapter`; bounded 10s timeout with SnackBar error surfacing; gen-guarded stale-init protection
-- ✓ **ERR-01/02** (Phase 3 + 4): `setAudioSources` failures and ready-await timeouts surface as user-visible SnackBars; all call sites have `if (!mounted) return` guards
-- ✓ **PLAY-03/TEST-02/TEST-03** (Phase 4): Call-site consistency closed (all 4 user-facing play-init sites share the canonical pattern, including the 4th — history-tap); `playback_trust_test.dart` green at 18/18; invariant tests landed (gen-discard + timeout fallback; 2 N/A after `_initSettleSub` removal)
-- ◷ **PLAY-03 on-device smoke** (Phase 4 UAT): Captured in `04-UAT.md` — user runs manual smoke across all 5 sources before release
+**Goal:** After quitting the app and returning to the last played book, pressing play resumes at the saved position *and* the progress bar reflects that position correctly from the first frame.
+
+**Target area (single bug):**
+- The position-stream bridge between the forked just_audio's deferred-load path and the UI's `ProgressBarWidget` (`getPositionStream()` → `Rx.combineLatest3`). After cold-restore with `playImmediately: false`, the deferred native load applies the saved index/position, so audio is correct — but the Dart streams that feed the progress bar lag behind / emit `Duration.zero` until the native load settles, and the `total` duration is `null` until the load completes. Result: bar renders at 0:00 and doesn't advance.
+
+**Key context:**
+- Must not regress `playback_trust_test.dart` — in particular the `playImmediately: false` invariant ("NO seek before deferred load") and the restore test.
+- Forked `just_audio` semantics pinned (ref `a6f8db8`): `initialSeekValues` applied on deferred load; `seek()` wipes them pre-load.
+- v1.0 fix (await `ProcessingState.ready` before `play()`) stays intact.
+
+### Validated (prior milestones)
+
+- ✓ Browse Librivox/Archive.org catalog (search + details + play) — existing
+- ✓ Browse YouTube audiobooks (search + import + stream) — existing
+- ✓ Browse 4read catalog (search + webview login + details + play) — existing
+- ✓ Browse knigavuhe catalog (list + search + details + play) — existing
+- ✓ Browse Sound-Books catalog (list + search + details + play) — existing
+- ✓ Play local/downloaded files (chapter parsing, cover extraction) — existing
+- ✓ Background playback + media notification (audio_service) — existing
+- ✓ Position persistence + resume across sessions (Hive) — existing
+- ✓ Bookmarks, favourites, listening stats, history — existing
+- ✓ Sleep timer, equalizer (Android), speed control — existing
+- ✓ In-app APK self-update (GitHub Releases) — existing
+- ✓ Theme (light/dark/blue), language prefs — existing
+- ✓ **v1.0 PLAY-01..06 / ERR-01..02 / TEST-02..03** — Sound-Books auto-play fix (await `ProcessingState.ready` gate + call-site consistency + SnackBar error surfacing); `playback_trust_test.dart` green
+
+### Active
+
+(None — requirements for v1.1 defined in REQUIREMENTS.md.)
 
 ### Out of Scope
 
-- Other sources' auto-play — confirmed working, not touching (user reports only Sound-Books is broken)
-- Details-screen skip / straight-to-player navigation — user wants to keep opening the details screen; just wants it to auto-play
-- Loading spinner / buffering feedback for non-YouTube sources — explicitly deferred ("just fix it")
-- Hardening the `initSongs` play race across all sources — explicitly deferred (minimal scope)
+- Other restore/resume issues beyond the progress bar (e.g. duration not showing for streaming sources, mini-player state, notification position) — explicitly deferred (minimal scope, "just this bug")
+- Cross-source restore hardening — explicitly deferred
 - 4 active OpenSpec changes (`fix-4read-book-open-error`, `four-read-top-books`, `knigavuhe-search-integration`, `youtube-playlist-auto-load`) — tracked separately under openspec/, not part of this milestone
 
 ## Context
@@ -97,4 +119,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-07-28 after v1.0 milestone (Sound-Books Auto-Play Fix)*
+*Last updated: 2026-08-03 — milestone v1.1 (Cold-Restore Progress Bar Fix) started*
