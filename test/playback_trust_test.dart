@@ -241,6 +241,71 @@ void main() {
       expect(handler.mediaItem.value?.title, 'Middle');
     });
 
+    // RESTORE-01 regression: cold-restore + play must emit the restored
+    // position and a non-zero duration on getPositionStream. Candidate
+    // failure mechanisms from 05-CONTEXT.md:
+    //   D-04a: _player.duration is null at emit time (probe lag) so the
+    //          live duration getter in getPositionStream yields Duration.zero.
+    //   D-04b: combineLatest3 never re-fires after the deferred load because
+    //          the position/bufferedPosition streams do not re-emit the
+    //          restored position until play() resolves the native load.
+    // The FakePlaybackEngine deferred-load mode (D-10) surfaces both: on
+    // setAudioSources(preload:false) the fake suppresses positions.add and
+    // nulls duration; play() resolves both. Before the fix, getPositionStream
+    // either never emits or emits with Duration.zero duration.
+    test(
+        'cold-restore + play emits restored position and non-zero duration on '
+        'getPositionStream (deferred-load regression)', () async {
+      final fake = FakePlaybackEngine();
+      final handler = MyAudioHandler(
+        player: fake,
+        configureAudioSession: false,
+      );
+      final audiobook = _sampleAudiobook();
+      final files = _sampleFiles();
+
+      await Hive.box('playing_audiobook_details_box')
+          .put('audiobook', audiobook.toMap());
+      await Hive.box('playing_audiobook_details_box')
+          .put('audiobookFiles', files.map((f) => f.toMap()).toList());
+      await Hive.box('playing_audiobook_details_box').put('index', 1);
+      await Hive.box('playing_audiobook_details_box').put('position', 123456);
+
+      // Cold-start restore: initSongs(playImmediately:false) →
+      // fake.setAudioSources(preload:false), which (in deferred mode) does
+      // NOT emit the restored position and leaves duration null.
+      await handler.restoreIfNeeded();
+
+      // D-05 invariant must hold before play: no seek, deferred-load path.
+      expect(fake.setAudioSourcesCalls.single.preload, false);
+      expect(fake.seekCalls, isEmpty,
+          reason: 'D-05: no seek in the playImmediately:false path');
+
+      // Subscribe BEFORE play so we observe the emission that follows the
+      // deferred load resolution. Wait a beat for combineLatest3 to fire.
+      final stream = handler.getPositionStream();
+      await handler.play();
+
+      PositionData? emitted;
+      try {
+        emitted = await stream.first
+            .timeout(const Duration(seconds: 1));
+      } on TimeoutException {
+        // D-04b manifestation: combineLatest3 never fires because the
+        // position/bufferedPosition streams never re-emit after the load.
+      }
+
+      expect(emitted, isNotNull,
+          reason: 'getPositionStream must emit after cold-restore + play');
+      expect(emitted!.position,
+          const Duration(milliseconds: 123456),
+          reason: 'emitted position must equal the saved cold-restore '
+              'position (D-04b: position re-emitted after deferred load)');
+      expect(emitted.duration > Duration.zero, isTrue,
+          reason: 'emitted duration must be non-zero (D-04a: duration '
+              'resolved after the deferred load, not Duration.zero)');
+    });
+
     test(
         'initSongs(playImmediately:false) does NOT seek before deferred load '
         '(forked just_audio regression)', () async {
@@ -626,6 +691,24 @@ class FakePlaybackEngine implements PlaybackEngine {
   int stopCount = 0;
   int pauseCount = 0;
 
+  // D-10: Deferred-load mode mirroring the forked just_audio preload:false
+  // semantics (fork ref a6f8db8). When true, setAudioSources records the
+  // initial index/position/sequence into the fake's state but does NOT emit
+  // the restored position on positionStream and leaves `duration` null —
+  // mirroring how the fork defers the native load until play(). The deferred
+  // load is then "resolved" by play(), which applies initialSeekValues
+  // (restored position) and resolves the duration probe. The synchronous-
+  // emission fake (the default) masks the cold-restore progress-bar bug
+  // (see 05-CONTEXT.md D-10); this deferred mode surfaces it so the
+  // regression test can exercise the gap.
+  bool deferPositionEmission = false;
+
+  // D-10: The non-zero duration the fake "resolves" once the deferred native
+  // load completes on play(). Kept separate from the live `duration` getter
+  // (which stays null during the deferred window) so the position-stream
+  // bridge's live `_player.duration` probe sees null until play() resolves.
+  static final _resolvedDuration = Duration(minutes: 5);
+
   @override
   bool playing = false;
 
@@ -686,6 +769,18 @@ class FakePlaybackEngine implements PlaybackEngine {
     playCount += 1;
     playing = true;
     playingStates.add(true);
+
+    // D-10: On the deferred-load path, play() triggers the fork's native
+    // load, which applies initialSeekValues (restored position) and resolves
+    // the duration probe. Mirror that here so the position-stream bridge
+    // re-emits the restored position + non-zero duration after play().
+    if (deferPositionEmission) {
+      deferPositionEmission = false;
+      duration = _resolvedDuration;
+      bufferedPosition = position;
+      positions.add(position);
+      bufferedPositions.add(bufferedPosition);
+    }
   }
 
   @override
@@ -734,6 +829,20 @@ class FakePlaybackEngine implements PlaybackEngine {
     sequence = sources.cast<IndexedAudioSource>();
     playbackEvent = PlaybackEvent(currentIndex: initialIndex);
     currentIndexes.add(initialIndex);
+
+    // D-10: preload:false mirrors the forked just_audio deferred-load path
+    // (fork ref a6f8db8). The fork records initialIndex/initialPosition in
+    // _pluginLoadRequest.initialSeekValues but does NOT emit the restored
+    // position on positionStream and does NOT resolve the duration probe
+    // until play() triggers the native load. Suppress the synchronous
+    // positions.add(initialPosition) and null out the live duration so the
+    // synchronous-emission fake no longer masks the cold-restore gap.
+    if (!preload) {
+      deferPositionEmission = true;
+      duration = null;
+      return;
+    }
+
     positions.add(initialPosition);
   }
 
